@@ -298,20 +298,20 @@ class searchClass {
         bool gameHasEnded(boardClass& board, searchNodeStruct* baseNodePtr) {
 
             if (board.isTwoRepetitions()) {
-                std::cout << "this position is a three fold repetition\n";
-                return true;
+                std::cout << "info string this position is a three fold repetition\n";
+                return false;
             }
             
             uint64_t nLegalMoves = (baseNodePtr->currMovePtr - baseNodePtr->baseIndexPtr);
             if (nLegalMoves == 0) {
 
                 if (board.inCheck()) {
-                    std::cout << ((board.whiteToMove) ? "black " : "white ") << "has won\n";
+                    std::cout << "info string " << ((board.whiteToMove) ? "black " : "white ") << "has won\n";
                 } else {
-                    std::cout << "this position is stalemate\n";
+                    std::cout << "info string this position is stalemate\n";
                 }
 
-                return true;
+                return false;
             }
             
             return false;
@@ -325,7 +325,7 @@ class searchClass {
             }
 
             if ((env.endTime < std::chrono::high_resolution_clock::now()) || //out of time
-                (env.nodes > env.maxNodes) /*node budget exceeded*/) [[unlikely]] {
+                (env.nodes >= env.maxNodes) /*node budget exceeded*/) [[unlikely]] {
     
                 return true;
             }
