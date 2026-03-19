@@ -1,0 +1,7 @@
+# Ignore any binary files except for the initial commit for the precomputed tables
+*.exe
+*.obj
+*.bin
+*.pgd
+*.txt
+*.pbd
