@@ -72,7 +72,7 @@ class searchClass {
             }
             */
 
-            nodePtr->unMakeInfo = env.board.makeMove<false>(nodePtr->currMovePtr->move);
+            nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
             nodePtr->currentEval = -quiescenceSearch(env, nodePtr);
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
 
@@ -145,21 +145,22 @@ class searchClass {
         while (nodePtr->currMovePtr > nodePtr->baseIndexPtr) {
             nodePtr->currMovePtr--;
 
-            nodePtr->unMakeInfo = env.board.makeMove<true>(nodePtr->currMovePtr->move, &env.tt);
+            nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             nodePtr->currentEval = -negaMax(env, nodePtr);
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
             if (hardLimitReached(env)) [[unlikely]] { return -32750; }
             
-            env.moveSorter.writeToHistoryStack(env.board, nodePtr);
-
             /*this block of if statements can be reduced in terms of branches.*/
             if (nodePtr->currentEval >= nodePtr->beta) { //beta cutoff
                 nodePtr->bestMove = *(nodePtr->currMovePtr);
                 nodePtr->trueType = nodeType::CUT;
                 nodePtr->bestEval = nodePtr->currentEval;
-                env.moveSorter.updateKillerMoves(env.board, nodePtr);
+                if (env.board.pieceAt[(((nodePtr->currMovePtr->move >> 6) & 0b111111))] == constants::emptySquare) {
+                    env.moveSorter.updateKillerMoves(env.board, nodePtr);
+                    env.moveSorter.markLastMoveAsBetaCut(nodePtr->historyCurrMovePtr);
+                }
                 env.moveSorter.updateHistory(nodePtr);
                 env.tt.updateTT(env, nodePtr);
                 return nodePtr->currentEval;
@@ -217,7 +218,7 @@ class searchClass {
             while (currMovePtrCopy > baseNodePtr->baseIndexPtr) {
                 currMovePtrCopy--;
 
-                baseNodePtr->unMakeInfo = env.board.makeMove<true>(currMovePtrCopy->move, &env.tt);
+                baseNodePtr->unMakeInfo = env.board.makeMove<true, false>(currMovePtrCopy->move, &env);
                 baseNodePtr->currentEval = -negaMax(env, baseNodePtr);
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
 
@@ -237,6 +238,7 @@ class searchClass {
             baseNodePtr->trueType = nodeType::PV; //can change for aspiration windows
             env.tt.updateTT(env, baseNodePtr);
 
+            //if ((baseNodePtr->depth / depth::ply) != 10) {continue;}
             prinInfoLine(baseNodePtr, env, startTime);
 
         } while ((baseNodePtr->depth < maxDepth));

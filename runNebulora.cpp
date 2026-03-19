@@ -199,11 +199,11 @@ int main(){
                 for (int plyPlayed = 0; plyPlayed < 6; plyPlayed++) {
 
                 searchContextStruct searchContext( board, moveGenerator, evaluation, moveSorter, tt, contemptFactor );
-                searchContext.maxDepth = 9; //search limit
+                searchContext.maxDepth = 10; //search limit
                 search.rootSearch(searchContext);
                 
                 uint16_t rawMove = search.searchStack[0].bestMove.move;
-                uint64_t unMakeInfo = board.makeMove<false>(rawMove);
+                uint64_t unMakeInfo = board.makeMove<false, false>(rawMove);
                 }
             }
         } else
@@ -225,7 +225,7 @@ int main(){
             if (ss >> nextToken && nextToken == "moves") {
                 while (ss >> nextToken) {
                     uint16_t move = board.coordinatesToMove(nextToken);
-                    board.makeMove<false>(move);
+                    board.makeMove<false, false>(move);
                 }
             }
         } else

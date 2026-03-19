@@ -102,7 +102,7 @@ class moveGeneratorClass {
 
                 moveStruct currMove = *firstEmptyPtr;
                 
-                uint64_t unMakeInfo = board.makeMove<false>(currMove.move);
+                uint64_t unMakeInfo = board.makeMove<false, false>(currMove.move);
                 uint64_t leafs = perftNode(board, depth - 1, firstEmptyPtr);
                 board.unMakeMove(unMakeInfo, currMove.move);
 
@@ -134,7 +134,7 @@ class moveGeneratorClass {
 
                 moveStruct currMove = *firstEmptyPtr;
                 
-                uint64_t unMakeInfo = board.makeMove<false>(currMove.move);
+                uint64_t unMakeInfo = board.makeMove<false, false>(currMove.move);
                 leafs += perftNode(board, depth - 1, firstEmptyPtr);
                 board.unMakeMove(unMakeInfo, currMove.move);
             }

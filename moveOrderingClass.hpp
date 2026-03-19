@@ -30,26 +30,6 @@ class moveOrderingClass {
             history.fill(0);
         }
 
-        void writeToHistoryStack(boardClass& board, searchNodeStruct* nodePtr) {
-            using namespace constants;
-
-            uint16_t isBetaCut = nodePtr->currentEval >= nodePtr->beta;
-            uint16_t rawMove = nodePtr->currMovePtr->move;
-
-            uint16_t startingIndex = rawMove        & uint16_t(0b111111);
-            uint16_t targetIndex   = (rawMove >> 6) & uint16_t(0b111111);
-            uint16_t startingType  = board.pieceAt[startingIndex];
-            uint16_t targetType    = board.pieceAt[targetIndex];
-
-            //repack and write to the history stack
-            // isBetaCut (1)  | targetIndex (6)  | startingType (4)
-            *(nodePtr->historyCurrMovePtr) = (isBetaCut << 10) | (targetIndex << 4) | startingType;
-
-            //if this move is a capture then it shouldn't be saved
-            uint16_t isNonCapture = targetType == emptySquare;
-            nodePtr->historyCurrMovePtr += isNonCapture;
-        }
-
         void updateHistory(searchNodeStruct* nodePtr) {
 
             uint16_t* iMovePtr = nodePtr->historyCurrMovePtr;
@@ -65,6 +45,9 @@ class moveOrderingClass {
             for (int16_t &i:history) { i /= 4; }
         }
 
+        void markLastMoveAsBetaCut(uint16_t* historyCurrMovePtr) {
+            *(historyCurrMovePtr - 1) |= uint16_t(1ULL << 10);
+        }
 
 
 
@@ -143,7 +126,7 @@ class moveOrderingClass {
                 
                 //The transposition table move is always first
                 if (iMovePtr->move == ttMove) [[unlikely]] {
-                    iMovePtr->value = std::numeric_limits<int16_t>::max();
+                    iMovePtr->value = 32750;
                 } else
                 
                 // captures and promotions are given priority if they are not expected to lose material
@@ -154,19 +137,19 @@ class moveOrderingClass {
                     int32_t promotionvalue = int32_t( (0x0000000082240 >> (promotion    * 4) ) & 0b1111ULL);
                     int32_t isDefended     = ((1ULL << targetIndex) & seenByOpponent) != 0;
                     
-                    int value       = materialGain + promotionvalue - (materialLoss + promotionvalue) * isDefended + 32'749;
-                    iMovePtr->value = int16_t(value - (value < 32'749) * 65'508);
+                    int value       = materialGain + promotionvalue - (materialLoss + promotionvalue) * isDefended + 32'700;
+                    iMovePtr->value = int16_t(value - (value < 32'700) * 65'000);
                 } else
                 
                 //killer moves are recent quiet moves that resulted in a beta cut
                 if (iMovePtr->move == firstKillerMove) [[unlikely]] {
 
-                    iMovePtr->value = 32'748;
+                    iMovePtr->value = 32'500;
                 } else
 
                 if (iMovePtr->move == secondKillerMove) [[unlikely]] {
 
-                    iMovePtr->value = 32'747;
+                    iMovePtr->value = 32'250;
                 } else
                 
 
@@ -236,7 +219,7 @@ class moveOrderingClass {
                 uint16_t isBetaCut    = (packedMove >> 10) & uint16_t(0b1);
                 int16_t sign          = -1 + 2 * isBetaCut;
 
-                constexpr int16_t maxHistory = 512;
+                constexpr int16_t maxHistory = 512; // abs(x) <= 30k
                 int16_t clampedBonus = std::clamp<int16_t>( sign * depth * depth, -maxHistory, maxHistory);
                 uint64_t iHistory = startingType * 64 + targetSquare;
                 history[iHistory] += clampedBonus - (history[iHistory] * std::abs(clampedBonus)) / maxHistory;

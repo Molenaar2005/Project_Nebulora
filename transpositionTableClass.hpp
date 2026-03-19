@@ -168,7 +168,7 @@ class transpositionTableClass {
             uint16_t ttMove = probeTTMove(board);
 
             if (ttMove != 0 && depth > 0) { //check if non empty return
-                uint64_t unMakeInfo = board.makeMove<false>(ttMove);
+                uint64_t unMakeInfo = board.makeMove<false, false>(ttMove);
                 std::string restOfLine = pvLine(board, depth - 1, false);
                 board.unMakeMove(unMakeInfo, ttMove);
                 return (isFirstMove ? "" : " ") + board.moveToCoordinates(ttMove) + restOfLine;
@@ -253,8 +253,8 @@ class transpositionTableClass {
 
 /*defenition of make move to prevent circulair dependency*/
 
-template<bool prefetchTT>
-inline uint64_t boardClass::makeMove(const uint16_t& move, transpositionTableClass* transpositionTable){
+template<bool prefetchTT, bool addToHistoryStack>
+inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envPtr, searchNodeStruct* nodePtr){
     using namespace constants;
 
     //add the current hash to the repetitionHashList and advance the pointer
@@ -285,10 +285,10 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, transpositionTableCla
     positionHash ^= zobristHashes[targetIndex * 13 + targetPieceType];
     positionHash ^= zobristHashes[hash::whiteToMoveHash];
     if constexpr (prefetchTT) {
-        if (transpositionTable == nullptr) [[unlikely]] {
-            std::cerr << "nullptr for transpositionTable is passed" << std::endl;
+        if (envPtr == nullptr) [[unlikely]] {
+            std::cerr << "nullptr for envPtr is passed to makeMove" << std::endl;
         } else {
-            _mm_prefetch(static_cast<const char*>(transpositionTable->ttBucketPtr(positionHash)), _MM_HINT_T0);
+            _mm_prefetch(static_cast<const char*>(envPtr->tt.ttBucketPtr(positionHash)), _MM_HINT_T0);
         }
     }
 
@@ -326,7 +326,21 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, transpositionTableCla
     occupied[whiteToMove ? white : black] ^= targetBitBoard;
     occupied[combined] ^= targetBitBoard;
 
+    if constexpr (addToHistoryStack) {
 
+        if (nodePtr == nullptr) [[unlikely]] {
+            std::cerr << "nullptr for nodePtr is passed to makeMove" << std::endl;
+        } else {
+
+            //repack and write to the history stack
+            //targetIndex (6)  | startingType (4)
+            *(nodePtr->historyCurrMovePtr) = uint16_t((targetIndex << 4) | startPieceType);
+    
+            //if this move is a capture then it shouldn't be saved
+            uint16_t isNonCapture = targetPieceType == emptySquare;
+            nodePtr->historyCurrMovePtr += isNonCapture;
+        }
+    }
 
     //white enpassant to the left
     if ( ((startingIndex + 7) == targetIndex) && (startPieceType == whitePawn) && (targetPieceType == emptySquare)) [[unlikely]] {

@@ -265,8 +265,8 @@ class alignas(64) boardClass {
 
         //adjust the board
         /*declaration of make move to prevent circulair dependency*/
-        template<bool prefetchTT>
-        uint64_t makeMove(const uint16_t& move, transpositionTableClass* transpositionTable = nullptr);
+        template<bool prefetchTT, bool addToHistoryStack>
+        uint64_t makeMove(const uint16_t& move, searchEnvStruct* envPtr = nullptr, searchNodeStruct* nodePtr = nullptr);
 
 
         void unMakeMove(uint64_t unMakeInfo, const uint16_t move) {
