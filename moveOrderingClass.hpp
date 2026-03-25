@@ -155,9 +155,6 @@ class moveOrderingClass {
 
                 //remaining moves are sorted by history
                 {
-                    //int16_t isDefended = ((1ULL << targetIndex) & seenByOpponent) != 0;
-                    //iMovePtr->value = 5 - isDefended;
-
                     iMovePtr->value = history[startingType * 64 + targetIndex];
                 }
             }
@@ -219,8 +216,8 @@ class moveOrderingClass {
                 uint16_t isBetaCut    = (packedMove >> 10) & uint16_t(0b1);
                 int16_t sign          = -1 + 2 * isBetaCut;
 
-                constexpr int16_t maxHistory = 512; // abs(x) <= 30k
-                int16_t clampedBonus = std::clamp<int16_t>( sign * depth * depth, -maxHistory, maxHistory);
+                constexpr int16_t maxHistory = 8192; // abs(x) <= 30k
+                int16_t clampedBonus = std::clamp<int16_t>( sign * 4 * depth * depth, -maxHistory, maxHistory);
                 uint64_t iHistory = startingType * 64 + targetSquare;
                 history[iHistory] += clampedBonus - (history[iHistory] * std::abs(clampedBonus)) / maxHistory;
         }

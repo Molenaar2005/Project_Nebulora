@@ -24,47 +24,8 @@
 
 
 void initialize(){
-    //load in seenByKing
-    std::ifstream myFileKing("precomputedTables/seenByKing.bin", std::ios::binary);
-    if (!myFileKing) {std::cerr << "failed to open precomputedTables/seenByKing.bin\n";}
-    myFileKing.read(reinterpret_cast<char*>(seenByKing.data()), seenByKing.size() * sizeof(uint64_t));
-    myFileKing.close();
 
-    //load in seenByKnight
-    std::ifstream myFileKnight("precomputedTables/seenByKnight.bin", std::ios::binary);
-    if (!myFileKnight) {std::cerr << "failed to open precomputedTables/seenByKnight.bin\n";}
-    myFileKnight.read(reinterpret_cast<char*>(seenByKnight.data()), seenByKnight.size() * sizeof(uint64_t));
-    myFileKnight.close();
-
-    //load in seenByD12
-    std::ifstream myFileSeenD12("precomputedTables/seenByD12.bin", std::ios::binary);
-    if (!myFileSeenD12) {std::cerr << "failed to open precomputedTables/seenByD12.bin\n";}
-    myFileSeenD12.read(reinterpret_cast<char*>(seenByD12.data()), seenByD12.size() * sizeof(seenByD12[0]) * sizeof(uint64_t));
-    myFileSeenD12.close();
-
-    //load in seenByHV
-    std::ifstream myFileSeenHV("precomputedTables/seenByHV.bin", std::ios::binary);
-    if (!myFileSeenHV) {std::cerr << "failed to open precomputedTables/seenByHV.bin\n";}
-    myFileSeenHV.read(reinterpret_cast<char*>(seenByHV.data()), seenByHV.size() * sizeof(seenByHV[0]) * sizeof(uint64_t));
-    myFileSeenHV.close();
-
-    //load in attackHV
-    std::ifstream myFileAttackHV("precomputedTables/attackMaskHV.bin", std::ios::binary);
-    if (!myFileAttackHV) {std::cerr << "failed to open precomputedTables/attackMaskHV.bin\n";}
-    myFileAttackHV.read(reinterpret_cast<char*>(attackHV.data()), attackHV.size() * sizeof(uint64_t));
-    myFileAttackHV.close();
-
-    //load in attackD12
-    std::ifstream myFileAttackD12("precomputedTables/attackMaskD12.bin", std::ios::binary);
-    if (!myFileAttackD12) {std::cerr << "failed to open precomputedTables/attackMaskD12.bin\n";}
-    myFileAttackD12.read(reinterpret_cast<char*>(attackD12.data()), attackD12.size() * sizeof(uint64_t));
-    myFileAttackD12.close();
-
-    //load in fromToTable
-    std::ifstream myFileFromTo("precomputedTables/fromToTable.bin", std::ios::binary);
-    if (!myFileFromTo) {std::cerr << "failed to open precomputedTables/fromToTable.bin\n";}
-    myFileFromTo.read(reinterpret_cast<char*>(fromToTable.data()), fromToTable.size() * sizeof(uint64_t));
-    myFileFromTo.close();
+    #include "generateLookupTables.ipp"
 
     //initialize all zobrist hashes.
     std::mt19937_64 rng(0);
