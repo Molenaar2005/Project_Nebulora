@@ -153,8 +153,8 @@ class moveOrderingClass {
                 } else
                 
 
-                //remaining moves are sorted by history
-                {
+                
+                { //remaining moves are sorted by history
                     iMovePtr->value = history[startingType * 64 + targetIndex];
                 }
             }
@@ -177,19 +177,12 @@ class moveOrderingClass {
             uint16_t targetIndex = (rawMove >> 6) & 0b111111ULL;
             bool isCapture = board.pieceAt[targetIndex] != constants::emptySquare;
 
-            if (isCapture) {
-                return;
-            }
-
             uint8_t plyFromRoot = nodePtr->ply;
 
-
-            /*
-            When updating killers it is required for the new move to be different.
+            /* When updating killers it is required for the new move to be different.
             If the second killer equals the new move then the normal approach of rejecting the second and moving the
             first to second works fine. However if the first move equals the newKiller then an early return is needed
-            to prevent storing the same killerMove twice.
-            */
+            to prevent storing the same killerMove twice. */
            bool isNewMove = killerMoves[2 * plyFromRoot] != rawMove;
 
            //shift first to second and make the first the new move. Unless the newMove is already in the first slot.
