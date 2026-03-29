@@ -109,7 +109,7 @@ class searchClass {
         if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
         //check for repetition
-        if (repetitionReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
+        if (drawReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
 
 
         //try an early reaturn from the TT table.
@@ -313,6 +313,11 @@ class searchClass {
 
                 return false;
             }
+
+            if (board.fiftyMoveClockPly >= 100) {
+                std::cout << "info string this position is a draw by the 50-move draw rule\n";
+                return false;
+            }
             
             return false;
         }
@@ -368,7 +373,11 @@ class searchClass {
             return " " + std::to_string((1'000 * filledElements) / hashTotal);
         }
 
-        bool repetitionReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+        bool drawReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+
+            if (env.board.fiftyMoveClockPly >= 100) [[unlikely]] {
+                return true; //draw if 100 half moves have not resulted in a reset
+            }
 
             if (nodePtr->ply > 2) [[likely]] { 
                 if ( env.board.isOneRepetition()  ) [[unlikley]] { return true; }
