@@ -226,7 +226,7 @@ class transpositionTableClass {
 
             assembledEntry.hash       = env.board.positionHash;
             assembledEntry.meta       = uint16_t(nodePtr->depth) | (uint16_t(nodePtr->trueType) << 14);
-            assembledEntry.move       = nodePtr->bestMove.move;
+            assembledEntry.move       = nodePtr->bestMove;
             assembledEntry.eval       = mateScoreToLocal(nodePtr, nodePtr->bestEval);
             assembledEntry.generation = currentGeneration;
             assembledEntry.unUsed     = 0; //unused entry

@@ -64,24 +64,24 @@ struct alignas(4) moveStruct {
 
 struct alignas(64) searchNodeStruct {
 
-    moveStruct* currMovePtr;
-    moveStruct* baseIndexPtr;
-    uint16_t* historyCurrMovePtr;
-    uint16_t* historyBaseIndexPtr;
+    moveStruct* currMovePtr;       // 8 8
+    moveStruct* baseIndexPtr;      // 8 16
+    uint16_t* historyCurrMovePtr;  // 8 24
+    uint16_t* historyBaseIndexPtr; // 8 32
 
-    uint64_t seenByOpponent;
-    uint64_t unMakeInfo;
+    uint64_t seenByOpponent;       // 8 40
+    uint64_t unMakeInfo;           // 8 48
         
-    moveStruct bestMove;
-    int16_t depth;
+    uint16_t bestMove;             // 2 50
+    int16_t depth;                 // 2 52
         
-    int16_t bestEval;
-    int16_t currentEval;
-    int16_t alpha;
-    int16_t beta;
+    int16_t bestEval;              // 2 54
+    int16_t currentEval;           // 2 56
+    int16_t alpha;                 // 2 58
+    int16_t beta;                  // 2 60
         
-    uint8_t ply;
-    uint8_t trueType;       
+    uint8_t ply;                   // 1 61
+    uint8_t trueType;              // 1 62    
 };
 
 namespace constants {
@@ -201,7 +201,6 @@ struct searchEnvStruct {
                     contemptValue(ctx.contemptFactor)
                     { }
 };
-
 
 struct TTentryStruct {
     uint64_t hash;

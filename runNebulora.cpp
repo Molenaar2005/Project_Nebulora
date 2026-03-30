@@ -163,7 +163,7 @@ int main(){
                 searchContext.maxDepth = 10; //search limit
                 search.rootSearch(searchContext);
                 
-                uint16_t rawMove = search.searchStack[0].bestMove.move;
+                uint16_t rawMove = search.searchStack[0].bestMove;
                 uint64_t unMakeInfo = board.makeMove<false, false>(rawMove);
                 }
             }

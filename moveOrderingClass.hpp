@@ -173,7 +173,7 @@ class moveOrderingClass {
             //move contains a expected value and the raw move.
             //for now promotions and checks are also treated as killers.
             //possible improvement is to treat all tactical (including promotions and checks) moves as non-killers
-            uint16_t rawMove = nodePtr->bestMove.move;
+            uint16_t rawMove = nodePtr->bestMove;
             uint16_t targetIndex = (rawMove >> 6) & 0b111111ULL;
             bool isCapture = board.pieceAt[targetIndex] != constants::emptySquare;
 

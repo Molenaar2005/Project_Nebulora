@@ -59,14 +59,14 @@ class searchClass {
 
             /*
             //delta pruning
-            constexpr uint64_t pieceValues     = 0x0093351093351ULL;
-            constexpr uint64_t promotionValues = 0x00000000008224ULL;
+            constexpr uint64_t pieceValues     = 0x0000093351093351ULL;
+            constexpr uint64_t promotionValues = 0x0000000000082240ULL;
             uint8_t targetIndex = ((nodePtr->currMovePtr->move >> 6) & 0b111111);
             uint8_t promotion   = ((nodePtr->currMovePtr->move >> 12) & 0b111);
             uint8_t targetPieceType = env.board.pieceAt[targetIndex];
             int16_t materialGain = pieceValues     >> (4 * targetPieceType);
             int16_t promotionGain = promotionValues >> (4 * promotion);
-            constexpr int16_t margin = 80;
+            constexpr int16_t margin = 120;
             if ((nodePtr->bestEval + (materialGain + promotionGain) * 100 + margin) < nodePtr->alpha) {
                 continue;
             }
@@ -154,7 +154,7 @@ class searchClass {
             
             /*this block of if statements can be reduced in terms of branches.*/
             if (nodePtr->currentEval >= nodePtr->beta) { //beta cutoff
-                nodePtr->bestMove = *(nodePtr->currMovePtr);
+                nodePtr->bestMove = nodePtr->currMovePtr->move;
                 nodePtr->trueType = nodeType::CUT;
                 nodePtr->bestEval = nodePtr->currentEval;
                 if (env.board.pieceAt[(((nodePtr->currMovePtr->move >> 6) & 0b111111))] == constants::emptySquare) {
@@ -168,13 +168,13 @@ class searchClass {
 
             if (nodePtr->currentEval > nodePtr->alpha) { //inside window so far
                 nodePtr->alpha = nodePtr->currentEval;
-                nodePtr->bestMove = *(nodePtr->currMovePtr);
+                nodePtr->bestMove = nodePtr->currMovePtr->move;
                 nodePtr->bestEval = nodePtr->currentEval;
                 nodePtr->trueType = nodeType::CUT;
             }
 
             if (nodePtr->currentEval > nodePtr->bestEval) { //new best score found
-                nodePtr->bestMove = *(nodePtr->currMovePtr);
+                nodePtr->bestMove = nodePtr->currMovePtr->move;
                 nodePtr->bestEval = nodePtr->currentEval;
             }
         }
@@ -224,13 +224,14 @@ class searchClass {
 
                 //return immidiatly if out of time or the node budget is reached.
                 if (hardLimitReached(env)) [[unlikely]] {
-                    std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove.move) << '\n';  
+                    std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove) << '\n';
+                    ctx.maxNodes = env.nodes;  
                     return;
                 }
 
                 if (baseNodePtr->currentEval > baseNodePtr->alpha) { //inside window so far
                     baseNodePtr->alpha = baseNodePtr->currentEval;
-                    baseNodePtr->bestMove = *(currMovePtrCopy);
+                    baseNodePtr->bestMove = currMovePtrCopy->move;
                     baseNodePtr->bestEval = baseNodePtr->currentEval; //only used for TT updates.
                 }
             }
@@ -243,7 +244,9 @@ class searchClass {
 
         } while ((baseNodePtr->depth < maxDepth));
 
-        std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove.move) << '\n';  
+        std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove) << '\n'; 
+        ctx.maxNodes = env.nodes;  
+ 
     }
 
 
@@ -257,7 +260,7 @@ class searchClass {
             baseNodePtr->ply = 0;
             baseNodePtr->baseIndexPtr = &env.moveGenerator.moveStack[0];
             baseNodePtr->currMovePtr = &env.moveGenerator.moveStack[0];
-            baseNodePtr->bestMove = {0, 0}; //this is the best move found so far.
+            baseNodePtr->bestMove = 0; //this is the best move found so far.
             baseNodePtr->historyBaseIndexPtr = &env.moveSorter.historyStack[0];
             baseNodePtr->historyCurrMovePtr  = &env.moveSorter.historyStack[0];
 
