@@ -28,6 +28,8 @@ class searchClass {
         For now I only search captures for simplicity. However neglecting checks can result in ELO loss. Especially since static_evaluation
         is not reliable when in check. So not done yet but enough for now.*/
 
+        //return immidiatly if out of time or the node budget is reached.
+        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
         //setup the current node
         searchNodeStruct* nodePtr = setupNode(parentNodePtr);
@@ -35,8 +37,6 @@ class searchClass {
         env.selDepth = std::max(env.selDepth, nodePtr->ply);
         env.nodes++;
 
-        //return immidiatly if out of time or the node budget is reached.
-        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
 
         //stand pat
@@ -100,13 +100,13 @@ class searchClass {
     }
 
     int16_t negaMax(searchEnvStruct& env, searchNodeStruct* parentNodePtr){
-
+        //return immidiatly if out of time or the node budget is reached.
+        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+        
         searchNodeStruct* nodePtr = setupNode(parentNodePtr);
         env.selDepth = std::max(env.selDepth, nodePtr->ply);
         env.nodes++;
 
-        //return immidiatly if out of time or the node budget is reached.
-        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
         //check for repetition
         if (drawReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
