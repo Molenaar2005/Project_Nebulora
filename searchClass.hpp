@@ -271,7 +271,7 @@ class searchClass {
             baseNodePtr->movesN = 0;
             baseNodePtr->currMovePtr = &env.moveGenerator.moveStack[0];
             baseNodePtr->bestMove = 0; //this is the best move found so far.
-            baseNodePtr->historyBaseIndexPtr = &env.moveSorter.historyStack[0];
+            baseNodePtr->historyMovesN = 0;
             baseNodePtr->historyCurrMovePtr  = &env.moveSorter.historyStack[0];
 
             return baseNodePtr;
@@ -287,8 +287,8 @@ class searchClass {
             nodePtr->movesN       = 0;
             nodePtr->currMovePtr  = parentNodePtr->currMovePtr + 1;
             
-            nodePtr->historyBaseIndexPtr = parentNodePtr->historyCurrMovePtr;
-            nodePtr->historyCurrMovePtr  = nodePtr->historyBaseIndexPtr;
+            nodePtr->historyMovesN = 0;
+            nodePtr->historyCurrMovePtr  = parentNodePtr->historyCurrMovePtr;
        
             nodePtr->depth        = parentNodePtr->depth - depth::ply; //Does not work for reductions
             nodePtr->ply          = parentNodePtr->ply + 1;

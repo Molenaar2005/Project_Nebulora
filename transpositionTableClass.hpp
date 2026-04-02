@@ -339,6 +339,7 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
             //if this move is a capture then it shouldn't be saved
             uint16_t isNonCapture = targetPieceType == emptySquare;
             nodePtr->historyCurrMovePtr += isNonCapture;
+            nodePtr->historyMovesN += isNonCapture;
         }
     }
 

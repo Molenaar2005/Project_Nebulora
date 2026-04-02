@@ -36,7 +36,8 @@ class moveOrderingClass {
             int16_t depth = int16_t(nodePtr->depth / depth::ply); //depth in ply
 
             //reward or penalize all the moves in the stack
-            while ((iMovePtr--) > (nodePtr->historyBaseIndexPtr)) {
+            for (int i = nodePtr->historyMovesN; i > 0; i--) {
+                iMovePtr--;
                 applyHistoryBonus(*iMovePtr, depth);
             }
         }
