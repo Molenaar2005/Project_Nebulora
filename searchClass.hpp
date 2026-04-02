@@ -49,12 +49,15 @@ class searchClass {
 
         
         //generate and sort moves
+        moveStruct* baseMovePtr = nodePtr->currMovePtr;
         env.moveGenerator.quiescenceMoves(env.board, nodePtr->currMovePtr, nodePtr);
+        nodePtr->movesN = nodePtr->currMovePtr - baseMovePtr;
         env.moveSorter.quiescence(env.board, nodePtr);
 
 
         //evaluate all the moves
-        while (nodePtr->currMovePtr > nodePtr->baseIndexPtr) {
+        while (nodePtr->movesN > 0) {
+            nodePtr->movesN--;
             nodePtr->currMovePtr--;
 
             /*
@@ -125,10 +128,12 @@ class searchClass {
         }
         
         //generate all legal moves
+        moveStruct* baseMovePtr = nodePtr->currMovePtr;
         env.moveGenerator.legalMoves(env.board, nodePtr->currMovePtr, nodePtr);
+        nodePtr->movesN = nodePtr->currMovePtr - baseMovePtr;
 
         //handle checkmate, stalemate. 50 move rule and insufficient material still left to do.
-        if ((nodePtr->currMovePtr - nodePtr->baseIndexPtr) == 0) {
+        if (nodePtr->movesN == 0) {
             if (env.board.inCheck()) {
                 //forced mate
                 return -mateScores::mateValue + nodePtr->ply;
@@ -142,7 +147,8 @@ class searchClass {
 
 
         //evaluate all the moves
-        while (nodePtr->currMovePtr > nodePtr->baseIndexPtr) {
+        while (nodePtr->movesN > 0) {
+            nodePtr->movesN--;
             nodePtr->currMovePtr--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
@@ -198,7 +204,9 @@ class searchClass {
 
         env.moveSorter.decayHistory();
 
+        moveStruct* baseMovePtr = baseNodePtr->currMovePtr;
         env.moveGenerator.legalMoves(env.board, baseNodePtr->currMovePtr, baseNodePtr);
+        baseNodePtr->movesN = baseNodePtr->currMovePtr - baseMovePtr;
 
         if (gameHasEnded(env.board, baseNodePtr)) {return;}
 
@@ -215,7 +223,9 @@ class searchClass {
 
             //evaluate all the moves
             moveStruct* currMovePtrCopy = baseNodePtr->currMovePtr;
-            while (currMovePtrCopy > baseNodePtr->baseIndexPtr) {
+            for (int i = baseNodePtr->movesN; i > 1; i--) {
+            //while (baseNodePtr->movesN > 1) {
+                //baseNodePtr->movesN--;
                 currMovePtrCopy--;
 
                 baseNodePtr->unMakeInfo = env.board.makeMove<true, false>(currMovePtrCopy->move, &env);
@@ -258,7 +268,7 @@ class searchClass {
 
             baseNodePtr->depth = 0;
             baseNodePtr->ply = 0;
-            baseNodePtr->baseIndexPtr = &env.moveGenerator.moveStack[0];
+            baseNodePtr->movesN = 0;
             baseNodePtr->currMovePtr = &env.moveGenerator.moveStack[0];
             baseNodePtr->bestMove = 0; //this is the best move found so far.
             baseNodePtr->historyBaseIndexPtr = &env.moveSorter.historyStack[0];
@@ -274,8 +284,8 @@ class searchClass {
             nodePtr->alpha        = -parentNodePtr->beta;
             nodePtr->beta         = -parentNodePtr->alpha;
             
-            nodePtr->baseIndexPtr = parentNodePtr->currMovePtr + 1;
-            nodePtr->currMovePtr  = nodePtr->baseIndexPtr;
+            nodePtr->movesN       = 0;
+            nodePtr->currMovePtr  = parentNodePtr->currMovePtr + 1;
             
             nodePtr->historyBaseIndexPtr = parentNodePtr->historyCurrMovePtr;
             nodePtr->historyCurrMovePtr  = nodePtr->historyBaseIndexPtr;
@@ -305,8 +315,7 @@ class searchClass {
                 return false;
             }
             
-            uint64_t nLegalMoves = (baseNodePtr->currMovePtr - baseNodePtr->baseIndexPtr);
-            if (nLegalMoves == 0) {
+            if (baseNodePtr->movesN == 0) {
 
                 if (board.inCheck()) {
                     std::cout << "info string " << ((board.whiteToMove) ? "black " : "white ") << "has won\n";

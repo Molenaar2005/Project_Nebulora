@@ -65,23 +65,23 @@ struct alignas(4) moveStruct {
 struct alignas(64) searchNodeStruct {
 
     moveStruct* currMovePtr;       // 8 8
-    moveStruct* baseIndexPtr;      // 8 16
-    uint16_t* historyCurrMovePtr;  // 8 24
-    uint16_t* historyBaseIndexPtr; // 8 32
+    uint8_t movesN;                // 1 9
+    uint16_t* historyCurrMovePtr;  // 8 17
+    uint16_t* historyBaseIndexPtr; // 8 25
 
-    uint64_t seenByOpponent;       // 8 40
-    uint64_t unMakeInfo;           // 8 48
+    uint64_t seenByOpponent;       // 8 33
+    uint64_t unMakeInfo;           // 8 41
         
-    uint16_t bestMove;             // 2 50
-    int16_t depth;                 // 2 52
+    uint16_t bestMove;             // 2 43
+    int16_t depth;                 // 2 45
         
-    int16_t bestEval;              // 2 54
-    int16_t currentEval;           // 2 56
-    int16_t alpha;                 // 2 58
-    int16_t beta;                  // 2 60
+    int16_t bestEval;              // 2 47
+    int16_t currentEval;           // 2 49
+    int16_t alpha;                 // 2 51
+    int16_t beta;                  // 2 53
         
-    uint8_t ply;                   // 1 61
-    uint8_t trueType;              // 1 62    
+    uint8_t ply;                   // 1 54
+    uint8_t trueType;              // 1 55    
 };
 
 namespace constants {

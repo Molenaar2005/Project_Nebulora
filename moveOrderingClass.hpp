@@ -63,7 +63,8 @@ class moveOrderingClass {
             moveStruct* iMovePtr = nodePtr->currMovePtr; //copy pointer
             const uint64_t seenByOpponent = nodePtr->seenByOpponent;
 
-            while ((iMovePtr--) > (nodePtr->baseIndexPtr)) {
+            for (int i = nodePtr->movesN; i > 0; i--){
+                iMovePtr--;
 
                 uint8_t startingIndex = iMovePtr->move & 0b111111ULL;
                 uint8_t targetIndex   = ((iMovePtr->move) >> 6) & 0b111111ULL;
@@ -83,7 +84,7 @@ class moveOrderingClass {
         //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
         //empty slot after all the moves.
         //std::sort(nodePtr->baseIndexPtr, nodePtr->currMovePtr, [](moveStruct& moveOne, moveStruct& moveTwo) {return moveOne.value < moveTwo.value;});
-        insertionSort(nodePtr->baseIndexPtr, nodePtr->currMovePtr);
+        insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
 
         void negaMax(boardClass& board, searchNodeStruct* nodePtr, TTentryStruct* ttEntryPtr) {
@@ -110,8 +111,8 @@ class moveOrderingClass {
             const uint16_t secondKillerMove = getSecondKillerMove(nodePtr);
 
 
-
-            while ((iMovePtr--) > (nodePtr->baseIndexPtr)) {
+            for (int i = nodePtr->movesN; i > 0; i--) {
+                iMovePtr--;
 
                 uint8_t startingIndex = iMovePtr->move & 0b111111ULL;
                 uint8_t targetIndex   = ((iMovePtr->move) >> 6) & 0b111111ULL;
@@ -163,7 +164,7 @@ class moveOrderingClass {
         //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
         //empty slot after all the moves.
         //std::sort(nodePtr->baseIndexPtr, nodePtr->currMovePtr, [](moveStruct& moveOne, moveStruct& moveTwo) {return moveOne.value < moveTwo.value;});
-        insertionSort(nodePtr->baseIndexPtr, nodePtr->currMovePtr);
+        insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
 
     
