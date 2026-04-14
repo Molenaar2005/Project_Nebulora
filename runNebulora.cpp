@@ -151,6 +151,10 @@ int main(){
                                                         "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
                                                         "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
 
+            std::chrono::time_point startTime = std::chrono::high_resolution_clock::now();
+            uint64_t totalNodes = 0;
+
+
             for (std::string testFen : testPositions) {
 
                 board.setupFEN(testFen);
@@ -162,11 +166,20 @@ int main(){
                 searchContextStruct searchContext( board, moveGenerator, evaluation, moveSorter, tt, contemptFactor );
                 searchContext.maxDepth = 10; //search limit
                 search.rootSearch(searchContext);
+                totalNodes += searchContext.maxNodes;
                 
                 uint16_t rawMove = search.searchStack[0].bestMove;
                 uint64_t unMakeInfo = board.makeMove<false, false>(rawMove);
                 }
             }
+
+            std::chrono::time_point endTime = std::chrono::high_resolution_clock::now();
+            uint64_t time = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+
+            std::cout << "total time: "  << (time             ) << " seconds\n";
+            std::cout << "total nodes: " << (totalNodes       ) << '\n';
+            std::cout << "average nps: " << (totalNodes / time) << '\n';
+
         } else
 
         if (nextToken == "position") {
