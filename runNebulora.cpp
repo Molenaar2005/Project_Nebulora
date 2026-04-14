@@ -164,7 +164,7 @@ int main(){
                 for (int plyPlayed = 0; plyPlayed < 6; plyPlayed++) {
 
                 searchContextStruct searchContext( board, moveGenerator, evaluation, moveSorter, tt, contemptFactor );
-                searchContext.maxDepth = 10; //search limit
+                searchContext.maxDepth = 9; //search limit
                 search.rootSearch(searchContext);
                 totalNodes += searchContext.maxNodes;
                 

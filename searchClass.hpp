@@ -223,7 +223,7 @@ class searchClass {
 
             //evaluate all the moves
             moveStruct* currMovePtrCopy = baseNodePtr->currMovePtr;
-            for (int i = baseNodePtr->movesN; i > 1; i--) {
+            for (int i = baseNodePtr->movesN; i > 0; i--) {
             //while (baseNodePtr->movesN > 1) {
                 //baseNodePtr->movesN--;
                 currMovePtrCopy--;
