@@ -1,12 +1,21 @@
+/* Copyright (C) 2026 The Project_Nebulora Developers
+
+This program is free software: you can redistribute it and/or modify it under the terms of the 
+GNU General Public License as published by the Free Software Foundation, either version 3 
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program. 
+If not, see https://www.gnu.org/licenses/.
+*/
+
 #include<iostream>
-//#include<bitset>
 #include<string>
 #include<sstream>
 #include<array>
-#include<fstream>
-//#include<vector>
-//#include<cmath>
-//#include<random>
 #include<fstream>
 #include<bit>
 #include<chrono>
@@ -58,6 +67,7 @@ void initialize(){
 int main(){
 
     //startup
+    std::cout << "Project_Nebulora by Molenaar2005" << std::endl;
     initialize();
 
     boardClass board;
@@ -111,14 +121,18 @@ int main(){
 
         if (nextToken == "bench") {
 
+            /* positions and results are from the perft results page on chessprammingwiki.org
+            LINK: https://www.chessprogramming.org/Perft_Results
+            */
+            std::array<std::string, 6> testPositions = {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                                                        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                                                        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+                                                        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+                                                        "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+                                                        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
+            
             if ((ss >> nextToken) && (nextToken == "perft")) {
-                
-                std::array<std::string, 6> testPositions = {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                                                            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-                                                            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
-                                                            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-                                                            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-                                                            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
+
                 std::array<int, 6> depths = {7, 6, 8, 6, 5, 6};
                 std::array<uint64_t, 6> expectedOutcome = {3'195'901'860, 8'031'647'685, 3'009'794'393, 706'045'033, 89'941'194, 6'923'051'137};
                 std::array<uint64_t, 6> speed;
@@ -144,16 +158,9 @@ int main(){
                 continue;
             }
 
-            std::array<std::string, 6> testPositions = {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                                                        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-                                                        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
-                                                        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-                                                        "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-                                                        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
-
+            
             std::chrono::time_point startTime = std::chrono::high_resolution_clock::now();
             uint64_t totalNodes = 0;
-
 
             for (std::string testFen : testPositions) {
 

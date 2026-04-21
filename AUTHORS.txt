@@ -1,0 +1,5 @@
+The following individuals are the copyright holders and primary developers for Project_Nebulora:
+
+* Molenaar2005 (aka Pluk) <https://github.com/Molenaar2005>
+
+This identity covers all commits made by 'Pluk' associated with the email de.molenaar2005@gmail.com within this repository.
