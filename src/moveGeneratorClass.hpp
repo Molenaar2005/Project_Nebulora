@@ -99,7 +99,7 @@ class moveGeneratorClass {
                 case 0b11000: return moveGenerator<0b11000>(board, firstEmptyMovePtr, returnNodePtr);
                 case 0b11001: return moveGenerator<0b11001>(board, firstEmptyMovePtr, returnNodePtr);
                 default: std::cerr << "incorrect quiescenceMoves template" << std::endl;
-                }
+            }
         }
         
         uint64_t perftRoot(boardClass& board, uint8_t depth) {
@@ -212,7 +212,6 @@ class moveGeneratorClass {
             constexpr bool inQuiescence     = (templateType & 0b10000U) != 0;
 
             //all the relevant moveGenerator variables are packed in a struct to reduce the amount of references that need to be passed.
-            //moveGenContextStruct moveGenContext = moveGenContextStruct::moveGenContextStruct<whiteToMove>(boardRef, baseMoveStackIndex);
             moveGenContextStruct<whiteToMove> moveGenContext(boardRef, baseMoveStackPtr);
             
             //if there is a double check then only kingmoves may be valid
@@ -236,19 +235,20 @@ class moveGeneratorClass {
 
             
             kingMoves<whiteToMove, inQuiescence, castleRights>(moveGenContext);
-
-            //write back the required data
-            baseMoveStackPtr = moveGenContext.firstEmptyMovePtr;
+            
 
             if (returnNodePtr != nullptr) { //is a ptr for metadata given? (yes for search, no for perft)
                 returnNodePtr->seenByOpponent = moveGenContext.seenByOpponent;
+                returnNodePtr->movesN = moveGenContext.firstEmptyMovePtr - baseMoveStackPtr;
             }
+
+            //write back the required data
+            baseMoveStackPtr = moveGenContext.firstEmptyMovePtr;
         }
 
         template<bool whiteToMove>
         static uint64_t generateCheckMask(const boardClass& board){
             using namespace constants;
-
 
             const uint64_t opponentPawnBitboard   = board.bitboard[whiteToMove ? blackPawn   : whitePawn  ];
             const uint64_t opponentRookBitboard   = board.bitboard[whiteToMove ? blackRook   : whiteRook  ];
@@ -384,122 +384,119 @@ class moveGeneratorClass {
             }
 
 
-
             { //one forward
-              //one forward not pinned
-              constexpr int shiftValue = whiteToMove ? 8 : -8;
-              
-              //define the startingbitboard
-              uint64_t notPinned = friendlyPawns & ~pinMaskD12 & ~pinMaskHV;
-              uint64_t pinnedHV  = friendlyPawns & ~pinMaskD12 &  pinMaskHV; //only HV pins for oneforward
-              
-              //define the targetbitboard
-              uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
-                       validTargetSquares |= bitShift<shiftValue>(pinnedHV) & pinMaskHV;
-                       validTargetSquares &= ~allOccupiedSquares & checkMask;
+                //one forward not pinned
+                constexpr int shiftValue = whiteToMove ? 8 : -8;
+                
+                //define the startingbitboard
+                uint64_t notPinned = friendlyPawns & ~pinMaskD12 & ~pinMaskHV;
+                uint64_t pinnedHV  = friendlyPawns & ~pinMaskD12 &  pinMaskHV; //only HV pins for oneforward
+                
+                //define the targetbitboard
+                uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
+                        validTargetSquares |= bitShift<shiftValue>(pinnedHV) & pinMaskHV;
+                        validTargetSquares &= ~allOccupiedSquares & checkMask;
 
-              //add to the list
-              addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
+                //add to the list
+                addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
 
             { //two forward
-              //two forward not pinned
-              constexpr int shiftValue = whiteToMove ? 8 : -8;
+                //two forward not pinned
+                constexpr int shiftValue = whiteToMove ? 8 : -8;
 
-              constexpr uint64_t openingRank = whiteToMove ? secondRank : seventhRank;
+                constexpr uint64_t openingRank = whiteToMove ? secondRank : seventhRank;
 
-              uint64_t notPinned = friendlyPawns & openingRank & ~pinMaskD12 & ~pinMaskHV;
-              uint64_t pinnedHV  = friendlyPawns & openingRank & ~pinMaskD12 &  pinMaskHV;
-              
-              //prune away non empty squares
-              uint64_t oneForwardNotPinned = bitShift<shiftValue>(notPinned);
-              uint64_t oneForwardPinnedHV  = bitShift<shiftValue>(pinnedHV);
-              oneForwardNotPinned &= ~allOccupiedSquares;
-              oneForwardPinnedHV  &= ~allOccupiedSquares;
-  
-              //filter out occupied, and check squares
-              uint64_t validTargetSquares  = bitShift<shiftValue>(oneForwardNotPinned);
-                       validTargetSquares |= bitShift<shiftValue>(oneForwardPinnedHV) & pinMaskHV;
-                       validTargetSquares &= ~allOccupiedSquares & checkMask;
-  
-              //add to the list
-              addPawnMove<whiteToMove, 2 * shiftValue, inQuiescence>(validTargetSquares, ctx);
+                uint64_t notPinned = friendlyPawns & openingRank & ~pinMaskD12 & ~pinMaskHV;
+                uint64_t pinnedHV  = friendlyPawns & openingRank & ~pinMaskD12 &  pinMaskHV;
+                
+                //prune away non empty squares
+                uint64_t oneForwardNotPinned = bitShift<shiftValue>(notPinned);
+                uint64_t oneForwardPinnedHV  = bitShift<shiftValue>(pinnedHV);
+                oneForwardNotPinned &= ~allOccupiedSquares;
+                oneForwardPinnedHV  &= ~allOccupiedSquares;
+    
+                //filter out occupied, and check squares
+                uint64_t validTargetSquares  = bitShift<shiftValue>(oneForwardNotPinned);
+                        validTargetSquares |= bitShift<shiftValue>(oneForwardPinnedHV) & pinMaskHV;
+                        validTargetSquares &= ~allOccupiedSquares & checkMask;
+    
+                //add to the list
+                addPawnMove<whiteToMove, 2 * shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
 
             { //capture left
-              constexpr int shiftValue = whiteToMove ? 7 : -9;
-                          
-              //get all the startingSquares
-              uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | aFile);
-              uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~aFile;
-              
-              //find all the valid targetsquares              
-              uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
-                       validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
-                       validTargetSquares &= opponentBitboard & checkMask;
+                constexpr int shiftValue = whiteToMove ? 7 : -9;
+                            
+                //get all the startingSquares
+                uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | aFile);
+                uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~aFile;
+                
+                //find all the valid targetsquares              
+                uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
+                        validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
+                        validTargetSquares &= opponentBitboard & checkMask;
 
-              if constexpr (enpassantAllowed) {
-                  //enpassant left
-                  //calculate the targetsquare and compensate for checks and pins
-                  uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
-                           enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
-                           enpassantMove &= enpassantCheckMask & enpassantTargetMask;
-    
-                  //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
-                  //However because both are removed from this rank I need to check for this pin explicitly
-                  uint64_t movedAndCapturedPawn = bitShift<whiteToMove ? -8 : 8>(enpassantMove) | bitShift<whiteToMove ? -7 : 9>(enpassantMove);
-                  uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
-                  bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
-                  validTargetSquares |= enpassantMove * legalEnpassantMove;
+                if constexpr (enpassantAllowed) {
+                    //enpassant left
+                    //calculate the targetsquare and compensate for checks and pins
+                    uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
+                             enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
+                             enpassantMove &= enpassantCheckMask & enpassantTargetMask;
+        
+                    //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
+                    //However because both are removed from this rank I need to check for this pin explicitly
+                    uint64_t movedAndCapturedPawn = bitShift<whiteToMove ? -8 : 8>(enpassantMove) | bitShift<whiteToMove ? -7 : 9>(enpassantMove);
+                    uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
+                    bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
+                    validTargetSquares |= enpassantMove * legalEnpassantMove;
                 }
-  
-              //add to the list
-              addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
+    
+                //add to the list
+                addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
 
             { //capture right
-              constexpr int shiftValue = whiteToMove ? 9 : -7;
+                constexpr int shiftValue = whiteToMove ? 9 : -7;
 
-              //get all the startingSquares
-              uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | hFile);
-              uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~hFile;
+                //get all the startingSquares
+                uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | hFile);
+                uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~hFile;
 
-              //find all the valid targetsquares              
-              uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
-                       validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
-                       validTargetSquares &= opponentBitboard & checkMask;
+                //find all the valid targetsquares              
+                uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
+                         validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
+                         validTargetSquares &= opponentBitboard & checkMask;
 
-              if constexpr (enpassantAllowed) {
-                  //enpassant
-                  //calculate the targetsquare and compensate for checks and pins
-                  uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
-                           enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
-                           enpassantMove &= enpassantCheckMask & enpassantTargetMask;
-    
-                  //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
-                  //However because both are removed from this rank I need to check for this pin explicitly
-                  uint64_t movedAndCapturedPawn = whiteToMove ? (bitShift<-8>(enpassantMove) | bitShift<-9>(enpassantMove)) : (bitShift<8>(enpassantMove) | bitShift<7>(enpassantMove));
-                  uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
-                  bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
-                  validTargetSquares |= enpassantMove * legalEnpassantMove;
-              }
-              
-              addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
+                if constexpr (enpassantAllowed) {
+                    //enpassant
+                    //calculate the targetsquare and compensate for checks and pins
+                    uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
+                             enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
+                             enpassantMove &= enpassantCheckMask & enpassantTargetMask;
+        
+                    //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
+                    //However because both are removed from this rank I need to check for this pin explicitly
+                    uint64_t movedAndCapturedPawn = whiteToMove ? (bitShift<-8>(enpassantMove) | bitShift<-9>(enpassantMove)) : (bitShift<8>(enpassantMove) | bitShift<7>(enpassantMove));
+                    uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
+                    bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
+                    validTargetSquares |= enpassantMove * legalEnpassantMove;
+                }
+                
+                addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
-
         }
 
         template<bool whiteToMove, bool inQuiescence>
         static void knightMoves(moveGenContextStruct<whiteToMove> &ctx) {
             using namespace constants;
 
-            const uint64_t checkMask        = ctx.checkMask;
-            const uint64_t pinMaskD12       = ctx.pinMaskD12;
-            const uint64_t pinMaskHV        = ctx.pinMaskHV;
-
+            const uint64_t checkMask  = ctx.checkMask;
+            const uint64_t pinMaskD12 = ctx.pinMaskD12;
+            const uint64_t pinMaskHV  = ctx.pinMaskHV;
             
-            uint64_t toMove         = ctx.board.bitboard[whiteToMove ? whiteKnight : blackKnight];
-                     toMove         &= ~(pinMaskD12 | pinMaskHV);
+            uint64_t toMove  = ctx.board.bitboard[whiteToMove ? whiteKnight : blackKnight];
+                     toMove &= ~(pinMaskD12 | pinMaskHV);
 
             while (toMove != 0) {
                 
@@ -556,8 +553,6 @@ class moveGeneratorClass {
             const uint64_t pinMaskD12         = ctx.pinMaskD12;
             const uint64_t allOccupiedSquares = ctx.board.occupied[combined];
 
-
-
             uint64_t toMove  = ctx.board.bitboard[friendlyRook] | ctx.board.bitboard[friendlyQueen];
                      toMove &= ~pinMaskD12 & (isPinned ? pinMaskHV : ~pinMaskHV);
 
@@ -605,7 +600,7 @@ class moveGeneratorClass {
             //constants
             //It is not allowed to castle through a piece or through a square seen by the opponent. These masks are precomputed and shifted to blacks
             //half if it is black to move.
-            uint64_t friendlyKingBitboard = whiteToMove ? ctx.board.bitboard[whiteKing] : ctx.board.bitboard[blackKing];
+            uint64_t friendlyKingBitboard      = whiteToMove ? ctx.board.bitboard[whiteKing] : ctx.board.bitboard[blackKing];
             constexpr uint64_t shouldBeEmpty   = (kingSide ? 0b1100000ULL : 0b01110ULL) << (56 * !whiteToMove);
             constexpr uint64_t shouldNotBeSeen = (kingSide ? 0b1110000ULL : 0b11100ULL) << (56 * !whiteToMove); 
             constexpr uint64_t shiftValue      = kingSide ? 2 : -2;
@@ -736,17 +731,17 @@ class moveGeneratorClass {
             uint64_t friendlyKingBitBoard = whiteToMove ? board.bitboard[whiteKing] : board.bitboard[blackKing];
 
             { //add pawns
-              uint64_t opponentPawns = board.bitboard[whiteToMove ? blackPawn : whitePawn];
+                uint64_t opponentPawns = board.bitboard[whiteToMove ? blackPawn : whitePawn];
 
-              { //attack to the left
-                constexpr int shiftValue = whiteToMove ? -9 : 7;
-                seenByOpponent |= bitShift<shiftValue>(opponentPawns & ~aFile);
-              }
+                { //attack to the left
+                    constexpr int shiftValue = whiteToMove ? -9 : 7;
+                    seenByOpponent |= bitShift<shiftValue>(opponentPawns & ~aFile);
+                }
 
-              { //attack to the right
-                constexpr int shiftValue = whiteToMove ? -7 : 9;
-                seenByOpponent |= bitShift<shiftValue>(opponentPawns & ~hFile);
-              }
+                { //attack to the right
+                    constexpr int shiftValue = whiteToMove ? -7 : 9;
+                    seenByOpponent |= bitShift<shiftValue>(opponentPawns & ~hFile);
+                }
             }
 
             { //HV sliding pieces

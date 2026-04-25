@@ -75,8 +75,15 @@ class transpositionTableClass {
             TTentryStruct newEntry = assembleNewEntry(env, nodePtr);
 
             //current entry
+            const void* bucketPtr = ttBucketPtr(newEntry.hash);
+            TTentryStruct* ttEntry = static_cast<TTentryStruct*>(const_cast<void*>(bucketPtr));
+
+            /*old version
             uint64_t currentBucketIndex = (uint64_t(uint32_t(newEntry.hash >> 32ULL)) * ttBuckets) >> 32;
             TTentryStruct* ttEntry = &TT[currentBucketIndex].entry[0];
+            */
+            
+            
             int64_t newEntryScore = ttEntryScore(newEntry);
             
             
@@ -94,19 +101,11 @@ class transpositionTableClass {
                 lowestScore         = scoreDecreased ? currentEntryScore : lowestScore;
             }
             
-
             //replace if the new entry is considered more valuable then the current entry
             newEntryScore  -= -doubleBias * (ttEntry[lowestValueIndex].hash == newEntry.hash);
             newEntryScore  -= -emptyBias  * (ttEntry[lowestValueIndex].hash == 0ULL);
 
-            //branchless write back SIMD would be prefered since it removes a static variable.
-            //and this commented implementation does not track node distribution correctly.
-            /*
-            static thread_local TTentryStruct sink;
-            TTentryStruct* newEntryDestinationPtr = ( newEntryScore > lowestScore ) ? &ttEntry[lowestValueIndex] : &sink;
-            replaceEntry(*newEntryDestinationPtr, newEntry);
-            */
-
+            //future branchless write back with SIMD?
             if ( newEntryScore > lowestScore ) {
 
                 replaceEntry(ttEntry[lowestValueIndex], newEntry);
@@ -120,8 +119,12 @@ class transpositionTableClass {
             if ((env.board.fiftyMoveClockPly > 80) | (requestedHash == 0)) { return nullptr;}
             
             //find out what bucket it is located in
+            const void* bucketPtr = ttBucketPtr(requestedHash);
+            TTentryStruct* currentEntry = static_cast<TTentryStruct*>(const_cast<void*>(bucketPtr));
+            /* old version
             uint64_t currentBucketIndex = (uint64_t(uint32_t(requestedHash >> 32ULL)) * ttBuckets) >> 32;
             TTentryStruct* currentEntry = &TT[currentBucketIndex].entry[0];
+            */
             
             //loop over all the entries to find a matching hash
             uintptr_t returnPtr = reinterpret_cast<uintptr_t>(nullptr);
@@ -225,14 +228,14 @@ class transpositionTableClass {
             because they allow for more pruning.
             */
            
-           uint32_t age = (currentGeneration - entry.generation) & 0xFF;
+            uint32_t age = (currentGeneration - entry.generation) & 0xFF;
            
-           uint64_t unUsedGenerations = std::max<uint64_t>(1, age);
-           uint64_t type              = uint64_t(entry.meta >> 14) & 0b11ULL;
-           uint64_t depth             = uint64_t(entry.meta & 0x3FFF) + depth::ply * (type == nodeType::PV);
-           int64_t eval               = (type == nodeType::ALL) ? -entry.eval : entry.eval;
+            uint64_t unUsedGenerations = std::max<uint64_t>(1, age);
+            uint64_t type              = uint64_t(entry.meta >> 14) & 0b11ULL;
+            uint64_t depth             = uint64_t(entry.meta & 0x3FFF) + depth::ply * (type == nodeType::PV);
+            int64_t eval               = (type == nodeType::ALL) ? -entry.eval : entry.eval;
            
-           return -int64_t(unUsedGenerations << 32) + int64_t(depth << 18 ) + int64_t(type << 16 ) + eval;
+            return -int64_t(unUsedGenerations << 32) + int64_t(depth << 18 ) + int64_t(type << 16 ) + eval;
         }
         
         TTentryStruct assembleNewEntry(searchEnvStruct& env, searchNodeStruct* nodePtr) {

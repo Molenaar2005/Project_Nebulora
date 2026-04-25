@@ -168,10 +168,10 @@ int main(){
                 moveSorter.resetState();
                 std::cout << "testing fen: " << testFen << '\n';
 
-                for (int plyPlayed = 0; plyPlayed < 6; plyPlayed++) {
+                for (int plyPlayed = 0; plyPlayed < 1; plyPlayed++) {
 
                 searchContextStruct searchContext( board, moveGenerator, evaluation, moveSorter, tt, contemptFactor );
-                searchContext.maxDepth = 9; //search limit
+                searchContext.maxDepth = 12; //search limit
                 search.rootSearch(searchContext);
                 totalNodes += searchContext.maxNodes;
                 

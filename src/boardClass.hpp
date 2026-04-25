@@ -282,7 +282,6 @@ class alignas(64) boardClass {
         template<bool prefetchTT, bool addToHistoryStack>
         uint64_t makeMove(const uint16_t& move, searchEnvStruct* envPtr = nullptr, searchNodeStruct* nodePtr = nullptr);
 
-
         void unMakeMove(uint64_t unMakeInfo, const uint16_t move) {
             using namespace constants;
 
@@ -390,8 +389,57 @@ class alignas(64) boardClass {
             //incremental eval still left to do
         }
 
+        uint64_t makeNullMove(){
+            using namespace constants;
+
+            //add the current hash to the repetitionHashList and advance the pointer
+            //*(repetitionListPtr++) = positionHash;  //REPETITIONS UNDER NULL MOVES?!?!
+
+            //undo any possible enpassantFileHash
+            positionHash ^= zobristHashes[hash::enPassantFileHash + std::countr_zero(uint32_t(enpassantFiles) | 0x100U)];
+
+            positionHash ^= zobristHashes[hash::whiteToMoveHash];
+
+            //assemble the info needed to unmake this move
+            uint64_t unmakeInfo = (castlingFlags)
+                                | (enpassantFiles << 4)
+                                | (fiftyMoveClockPly << 12)
+                                | (0ULL << 19);
+
+            //update the board
+            fiftyMoveClockPly = fiftyMoveClockPly + 1;
+            moveClockPly += 1;
+            enpassantFiles = 0;
+            
+            whiteToMove = !whiteToMove;
+
+            //add the hash for castling changes and current enpassant state
+            positionHash ^= zobristHashes[hash::enPassantFileHash + std::countr_zero(uint32_t(enpassantFiles) | 0x100U)];
+
+            return unmakeInfo;
+        }
+
+        void unMakeNullMove(uint64_t unMakeInfo) {
+            using namespace constants;
+
+            //undo any possible enpassantFileHash
+            positionHash ^= zobristHashes[hash::enPassantFileHash + std::countr_zero(uint32_t(enpassantFiles) | 0x100U)];
+
+            //unpack the unMakeInfo variable
+            castlingFlags           = (unMakeInfo      ) & 0b1111U;
+            enpassantFiles          = (unMakeInfo >> 4 ) & 0b11111111U;
+            fiftyMoveClockPly       = (unMakeInfo >> 12) & 0b1111111U;
+            uint8_t targetPieceType = (unMakeInfo >> 19) & 0b1111U;
+            whiteToMove             = !whiteToMove;
+            positionHash ^= zobristHashes[hash::whiteToMoveHash];
+            moveClockPly--;
+
+            //reHash any possible enpassantFileHash
+            positionHash ^= zobristHashes[hash::enPassantFileHash + std::countr_zero(uint32_t(enpassantFiles) | 0x100U)];
+        }
 
 
+        
         //remaining functions
         bool inCheck(){
             if (whiteToMove) {

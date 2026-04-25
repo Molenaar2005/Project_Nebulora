@@ -13,7 +13,7 @@ Project_Nebulora is a uci-compatible chess engine written in C++. Development ha
 ## Features
 
 ### Search
-* **Iterative Deepening** with Negamax (Alpha-Beta pruning).
+* **Iterative Deepening** with Negamax (Alpha-Beta pruning), Null Move Pruning.
 * **Quiescence Search** for tactical stability.
 * **Transposition Table:** Bucketed (4 entries per bucket).
 * **Move Generation:** Bitboard-based, templated for speed.
@@ -45,7 +45,7 @@ Despite having minimal search heuristics, it reaches a **Lichess Elo of 2000+** 
 ---
 
 ## Future Direction
-* **Search:** PVS search, Reverse Futility Pruning, Null Move Pruning, and LMR/Reductions.
+* **Search:** PVS search, Reverse Futility Pruning, and LMR/Reductions.
 * **Evaluation:** King safety, mobility, and pawn structure terms.
 * **Move Ordering:** Continuation history (1, 2, 4, 6) and Static Exchange Evaluation (SEE).
 
