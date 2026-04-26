@@ -42,6 +42,10 @@ class searchClass {
         For now I only search captures for simplicity. However neglecting checks can result in ELO loss. Especially since static_evaluation
         is not reliable when in check. So not done yet but enough for now.*/
 
+        //return immidiatly if out of time or the node budget is reached.
+        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+
+
         //setup the current node
         searchNodeStruct* nodePtr = setupNode(parentNodePtr);
 
@@ -97,8 +101,14 @@ class searchClass {
         return nodePtr->bestEval;
     }
 
+    template<int8_t expectedType>
     int16_t negaMax(searchEnvStruct& env, searchNodeStruct* parentNodePtr){
-       
+        using namespace nodeType;
+
+        //return immidiatly if out of time or the node budget is reached.
+        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+
+        
         searchNodeStruct* nodePtr = setupNode(parentNodePtr);
         env.selDepth = std::max(env.selDepth, nodePtr->ply);
         env.nodes++;
@@ -132,13 +142,39 @@ class searchClass {
         env.moveSorter.negaMax(env.board, nodePtr, ttEntryPtr);
 
 
+        //evaluate the pv move if inside a pv node
+        if (expectedType == PV) {
+            nodePtr->movesN--;
+            nodePtr->currMovePtr--;
+
+            nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
+            nodePtr->currentEval = -negaMax<PV>(env, nodePtr);
+            env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
+            
+            //return immidiatly if out of time or the node budget is reached.
+            if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+            
+            bool isBetaCut = updateNodePtr(env, nodePtr);
+            if (isBetaCut) { return nodePtr->bestEval; }
+        }
+
+
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
             nodePtr->movesN--;
             nodePtr->currMovePtr--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            nodePtr->currentEval = -negaMax(env, nodePtr);
+            
+            if (!zeroWindowPruning<expectedType>(env, nodePtr)) {
+
+                // ALL ==> CUT, CUT ==> ALL, PV ==> PV
+                constexpr int8_t nodePattern[] = {CUT, ALL, PV};
+                constexpr int8_t expectedChildType = nodePattern[expectedType];
+
+                nodePtr->currentEval = -negaMax<expectedChildType>(env, nodePtr);
+            }
+            
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
@@ -156,6 +192,7 @@ class searchClass {
     }
 
     void rootSearch(searchContextStruct& ctx){
+        using namespace nodeType;
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -191,8 +228,8 @@ class searchClass {
                 
                 bool isFirstMove = i == baseNodePtr->movesN;
 
-                if (isFirstMove || !zeroWindowPruning(env, baseNodePtr)) {
-                    baseNodePtr->currentEval = -negaMax(env, baseNodePtr);
+                if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
+                    baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr);
                 }
                 
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
@@ -477,7 +514,7 @@ class searchClass {
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
-            int16_t nullEval = -negaMax(env, nodePtr);
+            int16_t nullEval = -negaMax<nodeType::CUT>(env, nodePtr);
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
             //restore the original depth
@@ -500,6 +537,7 @@ class searchClass {
             return friendlyPieceValue < 10;
         }
 
+        template<int8_t expectedType>
         void zeroWindowSearch(searchEnvStruct& env, searchNodeStruct* nodePtr) {
 
             //configure zero window
@@ -507,20 +545,25 @@ class searchClass {
             nodePtr->beta = nodePtr->alpha + 1;
 
             //search the zero window
-            nodePtr->currentEval = -negaMax(env, nodePtr);
+            nodePtr->currentEval = -negaMax<expectedType>(env, nodePtr);
 
             //reset the window
             nodePtr->beta = currentBeta;
         }
 
+        template<int8_t expectedType>
         bool zeroWindowPruning(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+            using namespace nodeType;
 
-            zeroWindowSearch(env, nodePtr);
+            //zero window pruning is only attempted in pv nodes
+            if constexpr (expectedType != PV) { return false; }
+
+            zeroWindowSearch<CUT>(env, nodePtr);
 
             //does this move need a full search?
             bool failLow  = nodePtr->currentEval <= nodePtr->alpha;
             bool failHigh = nodePtr->currentEval >= nodePtr->beta;
-            bool pruneFullSearch = failHigh | failHigh;
+            bool pruneFullSearch = failLow | failHigh;
             return pruneFullSearch;
         }
 
