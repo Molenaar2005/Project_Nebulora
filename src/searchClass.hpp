@@ -188,7 +188,13 @@ class searchClass {
                 currMovePtrCopy--;
 
                 baseNodePtr->unMakeInfo = env.board.makeMove<true, false>(currMovePtrCopy->move, &env);
-                baseNodePtr->currentEval = -negaMax(env, baseNodePtr);
+                
+                bool isFirstMove = i == baseNodePtr->movesN;
+
+                if (isFirstMove || !zeroWindowPruning(env, baseNodePtr)) {
+                    baseNodePtr->currentEval = -negaMax(env, baseNodePtr);
+                }
+                
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
 
                 //return immidiatly if out of time or the node budget is reached.
@@ -493,6 +499,35 @@ class searchClass {
 
             return friendlyPieceValue < 10;
         }
+
+        void zeroWindowSearch(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+
+            //configure zero window
+            int16_t currentBeta = nodePtr->beta;
+            nodePtr->beta = nodePtr->alpha + 1;
+
+            //search the zero window
+            nodePtr->currentEval = -negaMax(env, nodePtr);
+
+            //reset the window
+            nodePtr->beta = currentBeta;
+        }
+
+        bool zeroWindowPruning(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+
+            zeroWindowSearch(env, nodePtr);
+
+            //does this move need a full search?
+            bool failLow  = nodePtr->currentEval <= nodePtr->alpha;
+            bool failHigh = nodePtr->currentEval >= nodePtr->beta;
+            bool pruneFullSearch = failHigh | failHigh;
+            return pruneFullSearch;
+        }
+
+
+
+
+
 
 };
 
