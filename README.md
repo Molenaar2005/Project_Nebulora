@@ -13,7 +13,7 @@ Project_Nebulora is a uci-compatible chess engine written in C++. Development ha
 ## Features
 
 ### Search
-* **Iterative Deepening** with Negamax (Alpha-Beta pruning), Null Move Pruning.
+* **Iterative Deepening** with Negamax (Alpha-Beta pruning), pvs_search and Null Move Pruning.
 * **Quiescence Search** for tactical stability.
 * **Transposition Table:** Bucketed (4 entries per bucket).
 * **Move Generation:** Bitboard-based, templated for speed.
@@ -30,7 +30,7 @@ Project_Nebulora is a uci-compatible chess engine written in C++. Development ha
 ---
 
 ## Building:
-* **Current compile command:** cl /O2 /Ob3 /arch:AVX2 /favor:INTEL64 /c /GL /std::c++20 /EHsc src/runNebulora.cpp
+* **Current compile command:** cl /EHsc /std::c++20 /O2 /Ob3 /arch:AVX2 /favor:INTEL64 /GL /c src/runNebulora.cpp
 * **Current link command:** link /LTCG runNebulora.obj
 
 ## Performance & State
@@ -45,7 +45,7 @@ Despite having minimal search heuristics, it reaches a **Lichess Elo of 2000+** 
 ---
 
 ## Future Direction
-* **Search:** PVS search, Reverse Futility Pruning, and LMR/Reductions.
+* **Search:** (Reverse) Futility Pruning and LMR/Reductions.
 * **Evaluation:** King safety, mobility, and pawn structure terms.
 * **Move Ordering:** Continuation history (1, 2, 4, 6) and Static Exchange Evaluation (SEE).
 
@@ -66,7 +66,7 @@ Project_Nebulora is a learning project, and I am very open to advice!
 * **Code:** Pull requests are welcome, though I prefer to implement core search logic myself as I learn.
 
 ## License
-This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE.txt](./LICENSE.txt) and [AUTHORS](./AUTHORS.txt) files for full legal details.
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](./LICENSE.txt) and [AUTHORS](./AUTHORS.txt) files for full legal details.
 
 > *“This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.”*
 
