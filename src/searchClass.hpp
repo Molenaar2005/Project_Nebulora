@@ -114,7 +114,7 @@ class searchClass {
         env.nodes++;
 
 
-        //check for repetition
+        //check for repetition and 50-move rule. Insufficient material still left to do.
         if (drawReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
 
 
@@ -136,7 +136,7 @@ class searchClass {
         //generate all legal moves
         env.moveGenerator.legalMoves(env.board, nodePtr->currMovePtr, nodePtr);
 
-        //handle checkmate, stalemate. 50 move rule and insufficient material still left to do.
+        //handle checkmate, stalemate.
         if (isGameEndingState(env, nodePtr)) { return nodePtr->bestEval; }
 
         env.moveSorter.negaMax(env.board, nodePtr, ttEntryPtr);
