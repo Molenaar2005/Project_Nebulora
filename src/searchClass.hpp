@@ -53,7 +53,7 @@ class searchClass {
 
         //stand pat
         //requires adjustment for positions in check since static eval is not allowed
-        nodePtr->bestEval = env.evaluation.static_evaluation<false>(env.board);
+        nodePtr->bestEval = nodePtr->staticEval;
         if (nodePtr->bestEval >= nodePtr->beta) {
             return nodePtr->bestEval; //beta cut off
         } 
@@ -69,7 +69,6 @@ class searchClass {
         while (nodePtr->movesN > 0) {
             nodePtr->movesN--;
             nodePtr->currMovePtr--;
-
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
             nodePtr->currentEval = -quiescenceSearch(env, setupNode(env, nodePtr));
@@ -127,7 +126,7 @@ class searchClass {
         }
 
         //Null move pruning
-        if (nullMovePruning(env, nodePtr)) {return nodePtr->beta;}
+        if (nullMovePruning<expectedType>(env, nodePtr)) {return nodePtr->beta;}
         
         //generate all legal moves
         env.moveGenerator.legalMoves(env.board, nodePtr->currMovePtr, nodePtr);
@@ -313,7 +312,7 @@ class searchClass {
             
             if (baseNodePtr->movesN == 0) {
 
-                if (board.inCheck()) {
+                if (baseNodePtr->inCheck) {
                     std::cout << "info string " << ((board.whiteToMove) ? "black " : "white ") << "has won\n";
                 } else {
                     std::cout << "info string this position is stalemate\n";
@@ -521,14 +520,18 @@ class searchClass {
             return false; //beta cut is false
         }
 
+        template<int8_t expectedType>
         bool nullMovePruning(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+
+            //null move pruning is only done at expected cut nodes
+            if (expectedType != nodeType::CUT) { return false; }
 
             //checks to disable NMP
             bool sufficientDepth     = nodePtr->depth >= (depth::ply * 4);
             bool highDepth           = nodePtr->depth >= (depth::ply * 6);
-            bool highEnoughEval      = (nodePtr->beta + 50) < env.evaluation.static_evaluation<false>(env.board);
+            bool highEnoughEval      = (nodePtr->beta + 0) < nodePtr->staticEval;
             bool isZugZwang          = zugZwangLikely(env);
-            bool notIncheck          = !env.board.inCheck();
+            bool notIncheck          = !nodePtr->inCheck;
             bool allowNMP = sufficientDepth & highEnoughEval & !isZugZwang & notIncheck;
             if (!allowNMP) {return false;}
 
@@ -536,7 +539,7 @@ class searchClass {
             //help reduce node counts further.
 
             //reduce the null move search depth
-            nodePtr->depth -= (2 + highDepth) * depth::ply;
+            nodePtr->reduction = 2 * depth::ply + nodePtr->depth / 6;
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
@@ -544,7 +547,7 @@ class searchClass {
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
             //restore the original depth
-            nodePtr->depth += (2 + highDepth) * depth::ply;
+            nodePtr->reduction = 0;
 
             return nullEval > nodePtr->beta;
         }
@@ -567,14 +570,14 @@ class searchClass {
         void zeroWindowSearch(searchEnvStruct& env, searchNodeStruct* nodePtr) {
 
             //configure zero window
-            int16_t currentBeta = nodePtr->beta;
+            nodePtr->stash = nodePtr->beta;
             nodePtr->beta = nodePtr->alpha + 1;
 
             //search the zero window
             nodePtr->currentEval = -negaMax<expectedType>(env, setupNode(env, nodePtr));
 
             //reset the window
-            nodePtr->beta = currentBeta;
+            nodePtr->beta = nodePtr->stash;
         }
 
         template<int8_t expectedType>

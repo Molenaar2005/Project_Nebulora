@@ -139,6 +139,8 @@ class transpositionTableClass {
                 currentEntry[i].generation = matchFound ? currentGeneration : currentEntry[i].generation; 
                 returnPtr |= reinterpret_cast<uintptr_t>(matchFound ? &currentEntry[i] : nullptr);
             }
+
+            nodePtr->TTHit = returnPtr != 0;
             
             return reinterpret_cast<TTentryStruct*>(returnPtr);
             
