@@ -72,7 +72,7 @@ class searchClass {
 
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
-            nodePtr->currentEval = -quiescenceSearch(env, setupNode(nodePtr));
+            nodePtr->currentEval = -quiescenceSearch(env, setupNode(env, nodePtr));
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
 
 
@@ -106,7 +106,6 @@ class searchClass {
         if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
         
-        searchNodeStruct* nodePtr = setupNode(parentNodePtr);
         env.selDepth = std::max(env.selDepth, nodePtr->ply);
         env.nodes++;
 
@@ -145,7 +144,7 @@ class searchClass {
             nodePtr->currMovePtr--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            nodePtr->currentEval = -negaMax<PV>(env, setupNode(nodePtr));
+            nodePtr->currentEval = -negaMax<PV>(env, setupNode(env, nodePtr));
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
@@ -169,7 +168,7 @@ class searchClass {
                 constexpr int8_t nodePattern[] = {CUT, ALL, PV};
                 constexpr int8_t expectedChildType = nodePattern[expectedType];
 
-                nodePtr->currentEval = -negaMax<expectedChildType>(env, setupNode(nodePtr));
+                nodePtr->currentEval = -negaMax<expectedChildType>(env, setupNode(env, nodePtr));
             }
             
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
@@ -226,7 +225,7 @@ class searchClass {
                 bool isFirstMove = i == baseNodePtr->movesN;
 
                 if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
-                    baseNodePtr->currentEval = -negaMax<PV>(env, setupNode(baseNodePtr));
+                    baseNodePtr->currentEval = -negaMax<PV>(env, setupNode(env, baseNodePtr));
                 }
                 
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
@@ -264,17 +263,35 @@ class searchClass {
         //helper functions for the root node
         searchNodeStruct* setupBaseNodePtr(searchEnvStruct& env) {
 
-            searchNodeStruct* baseNodePtr = &searchStack[0];
+            searchNodeStruct* nodePtr = &searchStack[0];
 
-            baseNodePtr->depth = 0;
-            baseNodePtr->ply = 0;
-            baseNodePtr->movesN = 0;
-            baseNodePtr->currMovePtr = &env.moveGenerator.moveStack[0];
-            baseNodePtr->bestMove = 0; //this is the best move found so far.
-            baseNodePtr->historyMovesN = 0;
-            baseNodePtr->historyCurrMovePtr  = &env.moveSorter.historyStack[0];
+            nodePtr->currMovePtr         = &env.moveGenerator.moveStack[0];
+            nodePtr->historyCurrMovePtr  = &env.moveSorter.historyStack[0];
+            nodePtr->seenByOpponent      = 0;
+            nodePtr->unMakeInfo          = 0;
 
-            return baseNodePtr;
+            nodePtr->bestMove    = 0;
+            nodePtr->currentEval = 0;
+            nodePtr->shiftMargin = 0;
+            nodePtr->staticEval  = env.evaluation.static_evaluation<false>(env.board);
+            nodePtr->reduction   = 0;
+            nodePtr->extension   = 0;
+            nodePtr->bestEval    = std::numeric_limits<int16_t>::min();
+            nodePtr->stash       = 0;
+            nodePtr->depth       = 0;
+            nodePtr->alpha       = -32750;
+            nodePtr->beta        = 32750;
+            
+            nodePtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
+            nodePtr->historyMovesN = 0;
+            nodePtr->trueType      = nodeType::ALL;
+            nodePtr->movesN        = 0;
+            nodePtr->ply           = 0;
+            nodePtr->TTIsCapture   = 0;
+            nodePtr->inCheck       = env.board.inCheck();
+            nodePtr->TTHit         = 0;
+            
+            return nodePtr;
         }
 
         uint64_t calculateMaxTime(searchContextStruct& ctx) {
@@ -366,25 +383,37 @@ class searchClass {
 
 
         //helper functions for in negamax
-        searchNodeStruct* setupNode(searchNodeStruct* parentNodePtr) {
+        searchNodeStruct* setupNode(searchEnvStruct& env, searchNodeStruct* parentPtr) {
 
-            searchNodeStruct* nodePtr = parentNodePtr + 1; //next frame in the stack
+            searchNodeStruct* childPtr = parentPtr + 1; //next frame in the stack
 
-            nodePtr->alpha        = -parentNodePtr->beta;
-            nodePtr->beta         = -parentNodePtr->alpha;
+            childPtr->currMovePtr         = parentPtr->currMovePtr + 1;
+            childPtr->historyCurrMovePtr  = parentPtr->historyCurrMovePtr;
+            childPtr->seenByOpponent      = 0;
+            childPtr->unMakeInfo          = 0;
+
+            childPtr->bestMove    = 0;
+            childPtr->currentEval = 0;
+            childPtr->shiftMargin = 0;
+            childPtr->staticEval  = env.evaluation.static_evaluation<false>(env.board);
+            childPtr->reduction   = 0;
+            childPtr->extension   = parentPtr->extension;
+            childPtr->bestEval    = std::numeric_limits<int16_t>::min();
+            childPtr->stash       = 0;
+            childPtr->depth       = parentPtr->depth - parentPtr->reduction - depth::ply; //extentions are negative reductions
+            childPtr->alpha       = -(parentPtr->beta + parentPtr->shiftMargin);
+            childPtr->beta        = -(parentPtr->alpha + parentPtr->shiftMargin);
             
-            nodePtr->movesN       = 0;
-            nodePtr->currMovePtr  = parentNodePtr->currMovePtr + 1;
+            childPtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
+            childPtr->historyMovesN = 0;
+            childPtr->trueType      = nodeType::ALL;
+            childPtr->movesN        = 0;
+            childPtr->ply           = parentPtr->ply + 1;
+            childPtr->TTIsCapture   = 0;
+            childPtr->inCheck       = env.board.inCheck();
+            childPtr->TTHit         = 0;
             
-            nodePtr->historyMovesN = 0;
-            nodePtr->historyCurrMovePtr  = parentNodePtr->historyCurrMovePtr;
-       
-            nodePtr->depth        = parentNodePtr->depth - depth::ply; //Does not work for reductions
-            nodePtr->ply          = parentNodePtr->ply + 1;
-            nodePtr->bestEval     = std::numeric_limits<int16_t>::min();
-            nodePtr->trueType     = nodeType::ALL;
-
-            return nodePtr;
+            return childPtr;
         }
     
         bool drawReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
@@ -511,7 +540,7 @@ class searchClass {
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
-            int16_t nullEval = -negaMax<nodeType::CUT>(env, setupNode(nodePtr));
+            int16_t nullEval = -negaMax<nodeType::CUT>(env, setupNode(env, nodePtr));
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
             //restore the original depth
@@ -542,7 +571,7 @@ class searchClass {
             nodePtr->beta = nodePtr->alpha + 1;
 
             //search the zero window
-            nodePtr->currentEval = -negaMax<expectedType>(env, setupNode(nodePtr));
+            nodePtr->currentEval = -negaMax<expectedType>(env, setupNode(env, nodePtr));
 
             //reset the window
             nodePtr->beta = currentBeta;
