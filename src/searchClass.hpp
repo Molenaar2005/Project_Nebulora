@@ -35,7 +35,7 @@ class searchClass {
     alignas(64) std::array<searchNodeStruct, depth::maxPly> searchStack; //allignment is redundant since the struct is already alligned
     
 
-    int16_t quiescenceSearch(searchEnvStruct& env, searchNodeStruct* parentNodePtr){
+    int16_t quiescenceSearch(searchEnvStruct& env, searchNodeStruct* nodePtr){
 
         /*  It is very dangerous to stop search completely once at a leafnode due to the horizon effect. In order to minimize this a quiescencesearch is used.
         This is a search that continues searching when a position is not quiet. Traditionally this means there is no check, no captures and no promotions.
@@ -45,9 +45,6 @@ class searchClass {
         //return immidiatly if out of time or the node budget is reached.
         if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
-
-        //setup the current node
-        searchNodeStruct* nodePtr = setupNode(parentNodePtr);
 
         env.selDepth = std::max(env.selDepth, nodePtr->ply);
         env.nodes++;
@@ -75,7 +72,7 @@ class searchClass {
 
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
-            nodePtr->currentEval = -quiescenceSearch(env, nodePtr);
+            nodePtr->currentEval = -quiescenceSearch(env, setupNode(nodePtr));
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
 
 
@@ -102,7 +99,7 @@ class searchClass {
     }
 
     template<int8_t expectedType>
-    int16_t negaMax(searchEnvStruct& env, searchNodeStruct* parentNodePtr){
+    int16_t negaMax(searchEnvStruct& env, searchNodeStruct* nodePtr){
         using namespace nodeType;
 
         //return immidiatly if out of time or the node budget is reached.
@@ -127,7 +124,7 @@ class searchClass {
         //NOTE: nodesetup is redundant if this is a call to quiescence since it does the same internally. Point for improvement.
         if (nodePtr->depth < depth::ply) {
             env.nodes--; //prevent double counting when entering quiescence.
-          return quiescenceSearch(env, parentNodePtr);
+          return quiescenceSearch(env, nodePtr);
         }
 
         //Null move pruning
@@ -148,7 +145,7 @@ class searchClass {
             nodePtr->currMovePtr--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            nodePtr->currentEval = -negaMax<PV>(env, nodePtr);
+            nodePtr->currentEval = -negaMax<PV>(env, setupNode(nodePtr));
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
@@ -172,7 +169,7 @@ class searchClass {
                 constexpr int8_t nodePattern[] = {CUT, ALL, PV};
                 constexpr int8_t expectedChildType = nodePattern[expectedType];
 
-                nodePtr->currentEval = -negaMax<expectedChildType>(env, nodePtr);
+                nodePtr->currentEval = -negaMax<expectedChildType>(env, setupNode(nodePtr));
             }
             
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
@@ -229,7 +226,7 @@ class searchClass {
                 bool isFirstMove = i == baseNodePtr->movesN;
 
                 if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
-                    baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr);
+                    baseNodePtr->currentEval = -negaMax<PV>(env, setupNode(baseNodePtr));
                 }
                 
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
@@ -514,7 +511,7 @@ class searchClass {
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
-            int16_t nullEval = -negaMax<nodeType::CUT>(env, nodePtr);
+            int16_t nullEval = -negaMax<nodeType::CUT>(env, setupNode(nodePtr));
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
             //restore the original depth
@@ -545,7 +542,7 @@ class searchClass {
             nodePtr->beta = nodePtr->alpha + 1;
 
             //search the zero window
-            nodePtr->currentEval = -negaMax<expectedType>(env, nodePtr);
+            nodePtr->currentEval = -negaMax<expectedType>(env, setupNode(nodePtr));
 
             //reset the window
             nodePtr->beta = currentBeta;
