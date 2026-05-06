@@ -458,11 +458,11 @@ class alignas(64) boardClass {
 
             /*in a "from fen" position the full history of the position is not known. As a result we can only look back till this position
             and not to the starting position.*/
-            const uint16_t NMovesBack = std::min<uint16_t>( fiftyMoveClockPly, repetitionListPtr - &repetitionHashList[0] ) / 2;
+            const uint16_t maxLookBack = std::min<uint16_t>( fiftyMoveClockPly, repetitionListPtr - &repetitionHashList[0] ) / 2;
             const uint64_t currentHash = positionHash;
 
             uint64_t* localHashListPtr = repetitionListPtr;
-            for (int i = 0; i < NMovesBack; i++) {
+            for (int i = 0; i < maxLookBack; i++) {
 
                 /*a repetition can only happen an even amount of plies ago. As a result I can advance the pointer two slots instead
                 of one*/
@@ -484,32 +484,25 @@ class alignas(64) boardClass {
 
             /*in a "from fen" position the full history of the position is not known. As a result we can only look back till this position
             and not to the starting position.*/
-            const uint16_t NMovesBack = std::min<uint16_t>( fiftyMoveClockPly, repetitionListPtr - &repetitionHashList[0] ) / 2;
+            const uint16_t maxLookBack = std::min<uint16_t>( fiftyMoveClockPly, repetitionListPtr - &repetitionHashList[0] ) / 2;
             const uint64_t currentHash = positionHash;
 
+            uint64_t repetitionN = 0;
             uint64_t* localHashListPtr = repetitionListPtr;
-            for (int i = 0; i < NMovesBack; i++) {
+            for (int i = 0; i < maxLookBack; i++) {
 
                 /*a repetition can only happen an even amount of plies ago. As a result I can advance the pointer two slots instead
                 of one*/
                 localHashListPtr -= 2;
-
-                if (currentHash == *(localHashListPtr)) [[unlikely]] { //is repetition?
-
-                    //check for a second repetition
-                    for ( ; i < NMovesBack; i++) {
-
-                        localHashListPtr -= 2;
-
-                        if (currentHash == *(localHashListPtr)) [[unlikely]] { //is repetition?
-
-                            return true;
-                        }
-                    }
-                }
+                repetitionN += (currentHash == *(localHashListPtr));
             }
 
-            return false;
+
+            if (repetitionN > 2) {
+                std::cerr << "info bug too many repetitions\n";
+            }
+
+            return repetitionN == 2;
         }
 
 
