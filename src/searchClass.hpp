@@ -116,7 +116,7 @@ class searchClass {
         //try an early reaturn from the TT table.
         //ttEarlyReturn writes the ttScore to nodePtr->bestEval when an early return is possible.
         TTentryStruct* ttEntryPtr = env.tt.probeTT(env, nodePtr);
-        if (ttEarlyReturn(env, ttEntryPtr, nodePtr)) { return nodePtr->bestEval;}
+        if (ttEarlyReturn<expectedType>(env, ttEntryPtr, nodePtr)) { return nodePtr->bestEval;}
 
         //if this is a leaf node then it requires a quiescence call. depth < onePly is for later support for fractional reductions.
         //NOTE: nodesetup is redundant if this is a call to quiescence since it does the same internally. Point for improvement.
@@ -431,28 +431,35 @@ class searchClass {
             return false;
         }
 
+        template<int8_t expectedType>
         bool ttEarlyReturn(searchEnvStruct& env, TTentryStruct* ttEntryPtr, searchNodeStruct* nodePtr) {
+            using namespace nodeType;
 
-            if (ttEntryPtr == nullptr) { //no tt hit
+            if (!nodePtr->TTHit) { //no tt hit
                 return false;
             }
 
-            uint16_t ttEntrydepth      = ttEntryPtr->meta & uint16_t(0x3FFFU);
-            uint16_t ttNodeType = ttEntryPtr->meta >> 14;
+            uint16_t ttEntrydepth = ttEntryPtr->meta & uint16_t(0x3FFFU);
+            uint16_t ttNodeType   = ttEntryPtr->meta >> 14;
 
             if (ttEntrydepth < nodePtr->depth) { //inssufficient depth for a return
                 return false;
             }
     
             int16_t correctedScore = env.tt.localToMateScore(nodePtr, ttEntryPtr->eval);
-            switch (ttNodeType) {
-                case nodeType::ALL: if ( correctedScore <= nodePtr->alpha) {nodePtr->bestEval = correctedScore; return true; } break;
-                case nodeType::CUT: if ( correctedScore >= nodePtr->beta)  {nodePtr->bestEval = correctedScore; return true; } break;
-                case nodeType::PV:                                         {nodePtr->bestEval = correctedScore; return true; } break;
-                default: std::cerr << "incorrect node type in TT early return\n";                                              break;
-            }
 
-            return false;
+            bool allTypeReturn = (ttNodeType == ALL) & (correctedScore <= nodePtr->alpha);
+            bool cutTypeReturn = (ttNodeType == CUT) & (correctedScore >= nodePtr->beta);
+            bool pvTypeReturn  = (ttNodeType == PV);
+            bool earlyReturnPossible = allTypeReturn | cutTypeReturn | pvTypeReturn;
+
+            
+            //tt early returns can miss repetitions in some situations so a bestEval update
+            //and early return is disabled. (bestMove is still used in move ordering)
+            earlyReturnPossible &= ttNodeType != PV;
+            nodePtr->bestEval = earlyReturnPossible ? correctedScore : nodePtr->bestEval;
+            
+            return earlyReturnPossible;
         }
 
         bool hardLimitReached(searchEnvStruct& env) {
@@ -595,11 +602,6 @@ class searchClass {
             bool pruneFullSearch = failLow | failHigh;
             return pruneFullSearch;
         }
-
-
-
-
-
 
 };
 
