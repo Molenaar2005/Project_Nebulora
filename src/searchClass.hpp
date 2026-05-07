@@ -45,12 +45,6 @@ class searchClass {
         //return immidiatly if out of time or the node budget is reached.
         if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
-
-        env.selDepth = std::max(env.selDepth, nodePtr->ply);
-        env.nodes++;
-
-
-
         //stand pat
         //requires adjustment for positions in check since static eval is not allowed
         nodePtr->bestEval = nodePtr->staticEval;
@@ -104,11 +98,6 @@ class searchClass {
         //return immidiatly if out of time or the node budget is reached.
         if (hardLimitReached(env)) [[unlikely]] { return -32750; }
 
-        
-        env.selDepth = std::max(env.selDepth, nodePtr->ply);
-        env.nodes++;
-
-
         //check for repetition and 50-move rule. Insufficient material still left to do.
         if (drawReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
 
@@ -120,10 +109,7 @@ class searchClass {
 
         //if this is a leaf node then it requires a quiescence call. depth < onePly is for later support for fractional reductions.
         //NOTE: nodesetup is redundant if this is a call to quiescence since it does the same internally. Point for improvement.
-        if (nodePtr->depth < depth::ply) {
-            env.nodes--; //prevent double counting when entering quiescence.
-          return quiescenceSearch(env, nodePtr);
-        }
+        if (nodePtr->depth < depth::ply) { return quiescenceSearch(env, nodePtr); }
 
         //Null move pruning
         if (nullMovePruning<expectedType>(env, nodePtr)) {return nodePtr->beta;}
@@ -289,6 +275,9 @@ class searchClass {
             nodePtr->TTIsCapture   = 0;
             nodePtr->inCheck       = env.board.inCheck();
             nodePtr->TTHit         = 0;
+
+            env.selDepth = std::max(env.selDepth, nodePtr->ply);
+            env.nodes++;
             
             return nodePtr;
         }
@@ -411,6 +400,9 @@ class searchClass {
             childPtr->TTIsCapture   = 0;
             childPtr->inCheck       = env.board.inCheck();
             childPtr->TTHit         = 0;
+
+            env.selDepth = std::max(env.selDepth, childPtr->ply);
+            env.nodes++;
             
             return childPtr;
         }
