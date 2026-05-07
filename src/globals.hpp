@@ -45,7 +45,10 @@ namespace nodeType {
         ALL = 0,
         CUT = 1,
         PV = 2,
-        empty = 3 //used for TT distribution display.
+        empty = 3, //used for TT distribution display.
+
+        upperBound = 0,
+        lowerBound = 1
     };  
 };
 
@@ -156,7 +159,45 @@ namespace constants {
             Nsquares = 64
         };
 
+        enum searchWindowConstants : int16_t {
+            inf = 32'750
+        };
+
 };
+
+namespace packedBits {
+
+        enum packedBits : uint64_t {
+            oneBit = 0b1,
+            twoBits = 0b11,
+            threeBits = 0b111,
+            fourBits = 0b1111,
+            sixBits = 0b111111,
+            sevenBits = 0b1111111,
+            eightBits = 0xFF,
+            fourteenBits = 0x3FFF
+        };
+
+};
+
+namespace moveOrderingConstatns {
+
+    enum orderingBiasses : int {
+        ttMoveBias = 32750,
+        winningCaptureBias = 32'700,
+        losingCaptureBias = 65'000,
+        firstKillerBias = 32'500,
+        secondKillerBias = 32'250
+    };
+
+    enum packedWeights : uint64_t {
+        packedMaterialValue = 0x0093351093351,
+        packedPromotionValue = 0x0000000082240
+    };
+    
+};
+
+
 
 struct searchContextStruct {
 

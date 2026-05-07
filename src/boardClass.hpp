@@ -283,6 +283,7 @@ class alignas(64) boardClass {
         uint64_t makeMove(const uint16_t& move, searchEnvStruct* envPtr = nullptr, searchNodeStruct* nodePtr = nullptr);
 
         void unMakeMove(uint64_t unMakeInfo, const uint16_t move) {
+            using namespace packedBits;
             using namespace constants;
 
             //undo any possible enpassantFileHash
@@ -291,13 +292,13 @@ class alignas(64) boardClass {
             uint8_t startingCastlingFlags = castlingFlags;
 
             //unpack the unMakeInfo variable
-            castlingFlags           = (unMakeInfo      ) & 0b1111U;
-            enpassantFiles          = (unMakeInfo >> 4 ) & 0b11111111U;
-            fiftyMoveClockPly       = (unMakeInfo >> 12) & 0b1111111U;
-            uint8_t targetPieceType = (unMakeInfo >> 19) & 0b1111U;
-            uint64_t startingIndex  = (move            ) & 0b111111U;
-            uint64_t targetIndex    = (move        >> 6) & 0b111111U;
-            uint8_t promotion       = (move       >> 12) & 0b111;
+            castlingFlags           = (unMakeInfo      ) & fourBits;
+            enpassantFiles          = (unMakeInfo >> 4 ) & eightBits;
+            fiftyMoveClockPly       = (unMakeInfo >> 12) & sevenBits;
+            uint8_t targetPieceType = (unMakeInfo >> 19) & fourBits;
+            uint64_t startingIndex  = (move            ) & sixBits;
+            uint64_t targetIndex    = (move        >> 6) & sixBits;
+            uint8_t promotion       = (move       >> 12) & threeBits;
             uint8_t startPieceType  = pieceAt[targetIndex] - promotion;
             whiteToMove             = !whiteToMove;
             positionHash ^= zobristHashes[hash::whiteToMoveHash];

@@ -43,7 +43,7 @@ class searchClass {
         is not reliable when in check. So not done yet but enough for now.*/
 
         //return immidiatly if out of time or the node budget is reached.
-        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+        if (hardLimitReached(env)) [[unlikely]] { return -constants::inf; }
 
         //stand pat
         //requires adjustment for positions in check since static eval is not allowed
@@ -61,8 +61,8 @@ class searchClass {
 
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
-            nodePtr->movesN--;
             nodePtr->currMovePtr--;
+            nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
             nodePtr->currentEval = -quiescenceSearch(env, setupNode(env, nodePtr));
@@ -70,7 +70,7 @@ class searchClass {
 
 
             //return immidiatly if out of time or the node budget is reached.
-            if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+            if (hardLimitReached(env)) [[unlikely]] { return -constants::inf; }
 
 
             if (nodePtr->currentEval >= nodePtr->beta) {
@@ -96,7 +96,7 @@ class searchClass {
         using namespace nodeType;
 
         //return immidiatly if out of time or the node budget is reached.
-        if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+        if (hardLimitReached(env)) [[unlikely]] { return -constants::inf; }
 
         //check for repetition and 50-move rule. Insufficient material still left to do.
         if (drawReturn(env, nodePtr)) [[unlikely]] {return -int16_t(env.contemptValue);}
@@ -120,30 +120,18 @@ class searchClass {
         //handle checkmate, stalemate.
         if (isGameEndingState(env, nodePtr)) { return nodePtr->bestEval; }
 
+        //sort all the moves
         env.moveSorter.negaMax(env.board, nodePtr, ttEntryPtr);
 
-
         //evaluate the pv move if inside a pv node
-        if (expectedType == PV) {
-            nodePtr->movesN--;
-            nodePtr->currMovePtr--;
-
-            nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            nodePtr->currentEval = -negaMax<PV>(env, setupNode(env, nodePtr));
-            env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
-            
-            //return immidiatly if out of time or the node budget is reached.
-            if (hardLimitReached(env)) [[unlikely]] { return -32750; }
-            
-            bool isBetaCut = updateNodePtr(env, nodePtr);
-            if (isBetaCut) { return nodePtr->bestEval; }
-        }
+        bool earlyReturn = searchPVMove<expectedType>(env, nodePtr);
+        if (earlyReturn) { return nodePtr->bestEval; }
 
 
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
-            nodePtr->movesN--;
             nodePtr->currMovePtr--;
+            nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             
@@ -159,14 +147,14 @@ class searchClass {
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
-            if (hardLimitReached(env)) [[unlikely]] { return -32750; }
+            if (hardLimitReached(env)) [[unlikely]] { return -constants::inf; }
             
             bool isBetaCut = updateNodePtr(env, nodePtr);
             if (isBetaCut) { return nodePtr->bestEval; }
         }
 
         /*if no early return has been triggered in the move loop and the best score is lowerbound (CUT type) then it is a PV node*/
-        nodePtr->trueType = (nodePtr->trueType == nodeType::CUT) ? nodeType::PV : nodeType::ALL;
+        nodePtr->trueType = (nodePtr->trueType == lowerBound) ? PV : ALL;
         env.tt.updateTT(env, nodePtr);
 
         return nodePtr->bestEval;
@@ -192,8 +180,8 @@ class searchClass {
         //itterative deepening
         do {
 
-            baseNodePtr->alpha = -32750;
-            baseNodePtr->beta = 32750;
+            baseNodePtr->alpha = -constants::inf;
+            baseNodePtr->beta = constants::inf;
 
             baseNodePtr->depth += depth::ply;
 
@@ -264,12 +252,12 @@ class searchClass {
             nodePtr->bestEval    = std::numeric_limits<int16_t>::min();
             nodePtr->stash       = 0;
             nodePtr->depth       = 0;
-            nodePtr->alpha       = -32750;
-            nodePtr->beta        = 32750;
+            nodePtr->alpha       = -constants::inf;
+            nodePtr->beta        = constants::inf;
             
             nodePtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
             nodePtr->historyMovesN = 0;
-            nodePtr->trueType      = nodeType::ALL;
+            nodePtr->trueType      = nodeType::upperBound; //an eval below alpha is an upperbound
             nodePtr->movesN        = 0;
             nodePtr->ply           = 0;
             nodePtr->TTIsCapture   = 0;
@@ -354,9 +342,11 @@ class searchClass {
         }
 
         void prinInfoLine(searchNodeStruct* baseNodePtr, searchEnvStruct& env, std::chrono::time_point<std::chrono::high_resolution_clock> startTime) {
-            
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            uint64_t currentSearchTime = std::max<uint64_t>(1, std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count());
+            using namespace std::chrono;
+
+
+            auto currentTime = high_resolution_clock::now();
+            uint64_t currentSearchTime = std::max<uint64_t>(1, duration_cast<milliseconds>(currentTime - startTime).count());
 
             std::cout << "info depth " << (baseNodePtr->depth / depth::ply)
                       << " seldepth "  << (uint16_t(env.selDepth))
@@ -394,7 +384,7 @@ class searchClass {
             
             childPtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
             childPtr->historyMovesN = 0;
-            childPtr->trueType      = nodeType::ALL;
+            childPtr->trueType      = nodeType::upperBound; //an eval below alpha is an upperbound
             childPtr->movesN        = 0;
             childPtr->ply           = parentPtr->ply + 1;
             childPtr->TTIsCapture   = 0;
@@ -426,13 +416,14 @@ class searchClass {
         template<int8_t expectedType>
         bool ttEarlyReturn(searchEnvStruct& env, TTentryStruct* ttEntryPtr, searchNodeStruct* nodePtr) {
             using namespace nodeType;
+            using namespace packedBits;
 
             if (!nodePtr->TTHit) { //no tt hit
                 return false;
             }
 
-            uint16_t ttEntrydepth = ttEntryPtr->meta & uint16_t(0x3FFFU);
-            uint16_t ttNodeType   = ttEntryPtr->meta >> 14;
+            uint16_t ttEntrydepth = ttEntryPtr->meta & uint16_t(fourteenBits);
+            uint16_t ttNodeType   = ttEntryPtr->meta >> 14; // top 2 bits
 
             if (ttEntrydepth < nodePtr->depth) { //inssufficient depth for a return
                 return false;
@@ -443,12 +434,13 @@ class searchClass {
             bool allTypeReturn = (ttNodeType == ALL) & (correctedScore <= nodePtr->alpha);
             bool cutTypeReturn = (ttNodeType == CUT) & (correctedScore >= nodePtr->beta);
             bool pvTypeReturn  = (ttNodeType == PV);
-            bool earlyReturnPossible = allTypeReturn | cutTypeReturn | pvTypeReturn;
-
+            
             
             //tt early returns can miss repetitions in some situations so a bestEval update
             //and early return is disabled. (bestMove is still used in move ordering)
-            earlyReturnPossible &= ttNodeType != PV;
+            bool isPVNode = ttNodeType == PV;
+            bool earlyReturnPossible = (allTypeReturn | cutTypeReturn | pvTypeReturn) & !isPVNode;
+
             nodePtr->bestEval = earlyReturnPossible ? correctedScore : nodePtr->bestEval;
             
             return earlyReturnPossible;
@@ -473,7 +465,7 @@ class searchClass {
         bool isGameEndingState(searchEnvStruct& env, searchNodeStruct* nodePtr) {
 
             if (nodePtr->movesN == 0) { 
-                if (env.board.inCheck()) {
+                if (nodePtr->inCheck) { //is branchless faster here?
 
                     //forced mate
                     nodePtr->bestEval = -mateScores::mateValue + nodePtr->ply;
@@ -493,9 +485,11 @@ class searchClass {
             /*this block of if statements can be reduced in terms of branches.*/
             if (nodePtr->currentEval >= nodePtr->beta) { //beta cutoff
                 nodePtr->bestMove = nodePtr->currMovePtr->move;
-                nodePtr->trueType = nodeType::CUT;
+                nodePtr->trueType = nodeType::lowerBound; //the score is at least this value if it improved alpha
                 nodePtr->bestEval = nodePtr->currentEval;
-                if (env.board.pieceAt[(((nodePtr->currMovePtr->move >> 6) & 0b111111))] == constants::emptySquare) {
+
+                bool isNonCapture = env.board.pieceAt[(((nodePtr->currMovePtr->move >> 6) & 0b111111))] == constants::emptySquare; //does not handle enpassant
+                if (isNonCapture) {
                     env.moveSorter.updateKillerMoves(env.board, nodePtr);
                     env.moveSorter.markLastMoveAsBetaCut(nodePtr->historyCurrMovePtr);
                 }
@@ -508,7 +502,7 @@ class searchClass {
                 nodePtr->alpha = nodePtr->currentEval;
                 nodePtr->bestMove = nodePtr->currMovePtr->move;
                 nodePtr->bestEval = nodePtr->currentEval;
-                nodePtr->trueType = nodeType::CUT;
+                nodePtr->trueType = nodeType::lowerBound;
             }
 
             if (nodePtr->currentEval > nodePtr->bestEval) { //new best score found
@@ -527,18 +521,14 @@ class searchClass {
 
             //checks to disable NMP
             bool sufficientDepth     = nodePtr->depth >= (depth::ply * 4);
-            bool highDepth           = nodePtr->depth >= (depth::ply * 6);
             bool highEnoughEval      = (nodePtr->beta + 0) < nodePtr->staticEval;
             bool isZugZwang          = zugZwangLikely(env);
             bool notIncheck          = !nodePtr->inCheck;
             bool allowNMP = sufficientDepth & highEnoughEval & !isZugZwang & notIncheck;
             if (!allowNMP) {return false;}
 
-            //doing the null move search with a zero window search can
-            //help reduce node counts further.
-
             //reduce the null move search depth
-            nodePtr->reduction = 2 * depth::ply + nodePtr->depth / 6;
+            nodePtr->reduction = 2 * depth::ply + nodePtr->depth / 6; //very conservative
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
@@ -593,6 +583,28 @@ class searchClass {
             bool failHigh = nodePtr->currentEval >= nodePtr->beta;
             bool pruneFullSearch = failLow | failHigh;
             return pruneFullSearch;
+        }
+
+        template<int8_t expectedType>
+        bool searchPVMove(searchEnvStruct& env, searchNodeStruct* nodePtr) {
+            using namespace nodeType;
+
+            //only done at pv nodes
+            if constexpr (expectedType != PV) { return false; }
+
+
+            nodePtr->currMovePtr--;
+            nodePtr->movesN--;
+
+            nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
+            nodePtr->currentEval = -negaMax<PV>(env, setupNode(env, nodePtr));
+            env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
+            
+            //return immidiatly if out of time or the node budget is reached.
+            if (hardLimitReached(env)) [[unlikely]] { return true; }
+            
+            bool isBetaCut = updateNodePtr(env, nodePtr);
+            return isBetaCut;
         }
 
 };

@@ -217,6 +217,7 @@ class transpositionTableClass {
     private:
                 
         int64_t ttEntryScore(TTentryStruct entry){
+            using namespace packedBits;
             /* The transposition table is ordered in buckets of four entries. In order to determine which one to keep a score is made classifying how usefull
             every entry is. This is done by the following criteria:
             1. A newer entry is likely more relavant and takes priority over an older one
@@ -230,11 +231,11 @@ class transpositionTableClass {
             because they allow for more pruning.
             */
            
-            uint32_t age = (currentGeneration - entry.generation) & 0xFF;
+            uint32_t age = (currentGeneration - entry.generation) & eightBits;
            
             uint64_t unUsedGenerations = std::max<uint64_t>(1, age);
-            uint64_t type              = uint64_t(entry.meta >> 14) & 0b11ULL;
-            uint64_t depth             = uint64_t(entry.meta & 0x3FFF) + depth::ply * (type == nodeType::PV);
+            uint64_t type              = uint64_t(entry.meta >> 14) & twoBits;
+            uint64_t depth             = uint64_t(entry.meta & fourteenBits) + depth::ply * (type == nodeType::PV);
             int64_t eval               = (type == nodeType::ALL) ? -entry.eval : entry.eval;
            
             return -int64_t(unUsedGenerations << 32) + int64_t(depth << 18 ) + int64_t(type << 16 ) + eval;
@@ -274,6 +275,7 @@ class transpositionTableClass {
 
 template<bool prefetchTT, bool addToHistoryStack>
 inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envPtr, searchNodeStruct* nodePtr){
+    using namespace packedBits;
     using namespace constants;
 
     //add the current hash to the repetitionHashList and advance the pointer
@@ -286,9 +288,9 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
     uint8_t startCastlingFlags = castlingFlags;
     
     //unpack the move
-    int64_t startingIndex = move & 0b111111ULL;
-    int64_t targetIndex = (move >> 6) & 0b111111ULL;
-    uint64_t promotion = (move >> 12) & 0b111ULL;
+    int64_t startingIndex = move & sixBits;
+    int64_t targetIndex = (move >> 6) & sixBits;
+    uint64_t promotion = (move >> 12) & threeBits;
 
     uint64_t startingBitBoard = 1ULL << startingIndex;
     uint64_t targetBitBoard = 1ULL << targetIndex;
@@ -304,11 +306,9 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
     positionHash ^= zobristHashes[targetIndex * 13 + targetPieceType];
     positionHash ^= zobristHashes[hash::whiteToMoveHash];
     if constexpr (prefetchTT) {
-        if (envPtr == nullptr) [[unlikely]] {
-            std::cerr << "nullptr for envPtr is passed to makeMove" << std::endl;
-        } else {
-            _mm_prefetch(static_cast<const char*>(envPtr->tt.ttBucketPtr(positionHash)), _MM_HINT_T0);
-        }
+
+        //may want to add asserts
+        _mm_prefetch(static_cast<const char*>(envPtr->tt.ttBucketPtr(positionHash)), _MM_HINT_T0);
     }
 
     //assemble the info needed to unmake this move
@@ -347,19 +347,16 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
 
     if constexpr (addToHistoryStack) {
 
-        if (nodePtr == nullptr) [[unlikely]] {
-            std::cerr << "nullptr for nodePtr is passed to makeMove" << std::endl;
-        } else {
+        //may want to add asserts
 
-            //repack and write to the history stack
-            //targetIndex (6)  | startingType (4)
-            *(nodePtr->historyCurrMovePtr) = uint16_t((targetIndex << 4) | startPieceType);
-    
-            //if this move is a capture then it shouldn't be saved
-            uint16_t isNonCapture = targetPieceType == emptySquare;
-            nodePtr->historyCurrMovePtr += isNonCapture;
-            nodePtr->historyMovesN += isNonCapture;
-        }
+        //repack and write to the history stack
+        //targetIndex (6)  | startingType (4)
+        *(nodePtr->historyCurrMovePtr) = uint16_t((targetIndex << 4) | startPieceType);
+
+        //if this move is a capture then it shouldn't be saved
+        uint16_t isNonCapture = targetPieceType == emptySquare;
+        nodePtr->historyCurrMovePtr += isNonCapture;
+        nodePtr->historyMovesN += isNonCapture;
     }
 
     //white enpassant to the left
