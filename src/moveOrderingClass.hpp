@@ -100,7 +100,7 @@ class moveOrderingClass {
         //Search loops backwards over the moves for improved cache locality. As a result the moves need to be sorted
         //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
         //empty slot after all the moves.
-        insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
+        //insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
 
         void negaMax(boardClass& board, searchNodeStruct* nodePtr, TTentryStruct* ttEntryPtr) {
@@ -175,8 +175,36 @@ class moveOrderingClass {
         //Search loops backwards over the moves for improved cache locality. As a result the moves need to be sorted
         //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
         //empty slot after all the moves.
-        insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
+        //insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
+
+        moveStruct* movePicker(searchNodeStruct* nodePtr) {
+
+            /* moveStack is a stack where the moves of every node in the current path
+            is stored. basePtr points to the first move for this node and topPtr points to the
+            last move for this node which is at the top of the stack. */
+            moveStruct* basePtr = nodePtr->currMovePtr - nodePtr->movesN;
+            moveStruct* topPtr = nodePtr->currMovePtr - 1;
+
+
+            //find the move with the highest value
+            moveStruct* bestPtr = topPtr;
+            int bestValue = topPtr->value;
+            for (moveStruct* iPtr = topPtr - 1; iPtr >= basePtr; iPtr--) {
+
+                bool improved = iPtr->value > bestValue;
+                bestValue     = improved ? iPtr->value : bestValue;
+                bestPtr       = improved ? iPtr : bestPtr;
+            }
+
+            //swap the best element to the end
+            std::swap(*bestPtr, *topPtr);
+
+            return topPtr;
+        }
+
+
+
 
     
         
@@ -209,23 +237,6 @@ class moveOrderingClass {
             return killerMoves[nodePtr->ply * 2 + 1];
         }
 
-
-    private:
-
-        void applyHistoryBonus(uint16_t packedMove, int16_t depth) {
-            using namespace packedBits;
-
-            uint16_t startingType = packedMove         & fourBits;
-            uint16_t targetSquare = (packedMove >> 4)  & sixBits;
-            uint16_t isBetaCut    = (packedMove >> 10) & oneBit;
-            int16_t sign          = -1 + 2 * isBetaCut;
-
-            constexpr int16_t maxHistory = 8192; // abs(x) <= 30k
-            int16_t clampedBonus = std::clamp<int16_t>( sign * 4 * depth * depth, -maxHistory, maxHistory);
-            uint64_t iHistory = startingType * 64 + targetSquare;
-            history[iHistory] += clampedBonus - (history[iHistory] * std::abs(clampedBonus)) / maxHistory;
-        }
-
         void insertionSort(moveStruct* firstPtr, moveStruct* lastPtr) {
 
             moveStruct* i = firstPtr;
@@ -243,6 +254,22 @@ class moveOrderingClass {
 
                 *(j + 1) = insertionElement;
             }
+        }
+
+    private:
+
+        void applyHistoryBonus(uint16_t packedMove, int16_t depth) {
+            using namespace packedBits;
+
+            uint16_t startingType = packedMove         & fourBits;
+            uint16_t targetSquare = (packedMove >> 4)  & sixBits;
+            uint16_t isBetaCut    = (packedMove >> 10) & oneBit;
+            int16_t sign          = -1 + 2 * isBetaCut;
+
+            constexpr int16_t maxHistory = 8192; // abs(x) <= 30k
+            int16_t clampedBonus = std::clamp<int16_t>( sign * 4 * depth * depth, -maxHistory, maxHistory);
+            uint64_t iHistory = startingType * 64 + targetSquare;
+            history[iHistory] += clampedBonus - (history[iHistory] * std::abs(clampedBonus)) / maxHistory;
         }
 };
 

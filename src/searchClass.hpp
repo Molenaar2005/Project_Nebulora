@@ -61,7 +61,7 @@ class searchClass {
 
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
-            nodePtr->currMovePtr--;
+            nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
             nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
@@ -130,7 +130,7 @@ class searchClass {
 
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
-            nodePtr->currMovePtr--;
+            nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
             nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
@@ -185,8 +185,10 @@ class searchClass {
 
             baseNodePtr->depth += depth::ply;
 
+            //root does not use a movepicker to prevent regenerating moves
             TTentryStruct* ttEntryPtr = env.tt.probeTT(env, baseNodePtr);
             env.moveSorter.negaMax(env.board, baseNodePtr, ttEntryPtr);
+            env.moveSorter.insertionSort(baseNodePtr->currMovePtr - baseNodePtr->movesN, baseNodePtr->currMovePtr);
 
             //evaluate all the moves
             moveStruct* currMovePtrCopy = baseNodePtr->currMovePtr;
@@ -593,7 +595,7 @@ class searchClass {
             if constexpr (expectedType != PV) { return false; }
 
 
-            nodePtr->currMovePtr--;
+            nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
             nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
