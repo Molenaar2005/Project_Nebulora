@@ -65,7 +65,10 @@ class searchClass {
             nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
-            nodePtr->currentEval = -quiescenceSearch(env, setupNode(env, nodePtr));
+
+            setupNode(env, nodePtr);
+            nodePtr->currentEval = -quiescenceSearch(env, nodePtr + 1);
+
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
 
 
@@ -141,7 +144,8 @@ class searchClass {
                 constexpr int8_t nodePattern[] = {CUT, ALL, PV};
                 constexpr int8_t expectedChildType = nodePattern[expectedType];
 
-                nodePtr->currentEval = -negaMax<expectedChildType>(env, setupNode(env, nodePtr));
+                setupNode(env, nodePtr);
+                nodePtr->currentEval = -negaMax<expectedChildType>(env, nodePtr + 1);
             }
             
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
@@ -200,7 +204,9 @@ class searchClass {
                 bool isFirstMove = i == baseNodePtr->movesN;
 
                 if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
-                    baseNodePtr->currentEval = -negaMax<PV>(env, setupNode(env, baseNodePtr));
+
+                    setupNode(env, baseNodePtr);
+                    baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr + 1);
                 }
                 
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
@@ -363,7 +369,7 @@ class searchClass {
 
 
         //helper functions for in negamax
-        searchNodeStruct* setupNode(searchEnvStruct& env, searchNodeStruct* parentPtr) {
+        void setupNode(searchEnvStruct& env, searchNodeStruct* parentPtr) {
 
             searchNodeStruct* childPtr = parentPtr + 1; //next frame in the stack
 
@@ -395,8 +401,6 @@ class searchClass {
 
             env.selDepth = std::max(env.selDepth, childPtr->ply);
             env.nodes++;
-            
-            return childPtr;
         }
     
         bool drawReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
@@ -534,7 +538,9 @@ class searchClass {
             
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
-            int16_t nullEval = -negaMax<nodeType::CUT>(env, setupNode(env, nodePtr));
+
+            setupNode(env, nodePtr);
+            int16_t nullEval = -negaMax<nodeType::CUT>(env, nodePtr + 1);
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
             //restore the original depth
@@ -565,7 +571,8 @@ class searchClass {
             nodePtr->beta = nodePtr->alpha + 1;
 
             //search the zero window
-            nodePtr->currentEval = -negaMax<expectedType>(env, setupNode(env, nodePtr));
+            setupNode(env, nodePtr);
+            nodePtr->currentEval = -negaMax<expectedType>(env, nodePtr + 1);
 
             //reset the window
             nodePtr->beta = nodePtr->stash;
@@ -599,7 +606,10 @@ class searchClass {
             nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            nodePtr->currentEval = -negaMax<PV>(env, setupNode(env, nodePtr));
+            
+            setupNode(env, nodePtr);
+            nodePtr->currentEval = -negaMax<PV>(env, nodePtr + 1);
+            
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
             
             //return immidiatly if out of time or the node budget is reached.
