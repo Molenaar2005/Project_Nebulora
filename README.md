@@ -40,7 +40,7 @@ Despite having minimal search heuristics, it reaches a **Lichess Elo of 2000+** 
 
 **Benchmarks (Intel i7-13700H):**
 * **Perft Speed:** 420+ Mnps (bulk-counting).
-* **Search Speed:** 6+ Mnps (average, heavily influenced by Quiescence nodes).
+* **Search Speed:** 8+ Mnps (average, heavily influenced by Quiescence nodes).
 
 ---
 
