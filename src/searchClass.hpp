@@ -65,7 +65,7 @@ class searchClass {
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
 
-            setupNode(env, nodePtr);
+            setupNode<false>(env, nodePtr);
             nodePtr->currentEval = -quiescenceSearch(env, nodePtr + 1);
 
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
@@ -141,7 +141,7 @@ class searchClass {
                 constexpr int8_t nodePattern[] = {CUT, ALL, PV};
                 constexpr int8_t expectedChildType = nodePattern[expectedType];
 
-                setupNode(env, nodePtr);
+                setupNode<false>(env, nodePtr);
                 nodePtr->currentEval = -negaMax<expectedChildType>(env, nodePtr + 1);
             }
             
@@ -201,7 +201,7 @@ class searchClass {
 
                 if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
 
-                    setupNode(env, baseNodePtr);
+                    setupNode<false>(env, baseNodePtr);
                     baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr + 1);
                 }
                 
@@ -257,7 +257,6 @@ class searchClass {
             nodePtr->reduction   = 0;
             nodePtr->extension   = 0;
             nodePtr->bestEval    = std::numeric_limits<int16_t>::min();
-            nodePtr->stash       = 0;
             nodePtr->depth       = 0;
             nodePtr->alpha       = -constants::inf;
             nodePtr->beta        = constants::inf;
@@ -368,6 +367,7 @@ class searchClass {
 
 
         //helper functions for in negamax
+        template<bool zeroWindow>
         void setupNode(searchEnvStruct& env, searchNodeStruct* parentPtr) {
 
             searchNodeStruct* childPtr = parentPtr + 1; //next frame in the stack
@@ -384,10 +384,9 @@ class searchClass {
             childPtr->reduction   = 0;
             childPtr->extension   = parentPtr->extension;
             childPtr->bestEval    = std::numeric_limits<int16_t>::min();
-            childPtr->stash       = 0;
             childPtr->depth       = parentPtr->depth - parentPtr->reduction - depth::ply; //extentions are negative reductions
-            childPtr->alpha       = -(parentPtr->beta + parentPtr->shiftMargin);
             childPtr->beta        = -(parentPtr->alpha + parentPtr->shiftMargin);
+            childPtr->alpha       = zeroWindow ? (childPtr->beta - 1) : -(parentPtr->beta + parentPtr->shiftMargin);
             
             childPtr->lockedSquare   = std::numeric_limits<int16_t>::max(); //flag meaning unused
             childPtr->quietsSearched = 0;
@@ -543,7 +542,7 @@ class searchClass {
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
 
-            setupNode(env, nodePtr);
+            setupNode<false>(env, nodePtr);
             int16_t nullEval = -negaMax<nodeType::CUT>(env, nodePtr + 1);
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
             
@@ -568,28 +567,14 @@ class searchClass {
         }
 
         template<int8_t expectedType>
-        void zeroWindowSearch(searchEnvStruct& env, searchNodeStruct* nodePtr) {
-
-            //configure zero window
-            nodePtr->stash = nodePtr->beta;
-            nodePtr->beta = nodePtr->alpha + 1;
-
-            //search the zero window
-            setupNode(env, nodePtr);
-            nodePtr->currentEval = -negaMax<expectedType>(env, nodePtr + 1);
-
-            //reset the window
-            nodePtr->beta = nodePtr->stash;
-        }
-
-        template<int8_t expectedType>
         bool zeroWindowPruning(searchEnvStruct& env, searchNodeStruct* nodePtr) {
             using namespace nodeType;
 
             //zero window pruning is only attempted in pv nodes
             if constexpr (expectedType != PV) { return false; }
 
-            zeroWindowSearch<CUT>(env, nodePtr);
+            setupNode<true>(env, nodePtr); //zeroWindow = true
+            nodePtr->currentEval = -negaMax<CUT>(env, nodePtr + 1);
 
             //does this move need a full search?
             bool failLow  = nodePtr->currentEval <= nodePtr->alpha;
@@ -610,7 +595,7 @@ class searchClass {
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             
-            setupNode(env, nodePtr);
+            setupNode<false>(env, nodePtr);
             nodePtr->currentEval = -negaMax<PV>(env, nodePtr + 1);
             
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
