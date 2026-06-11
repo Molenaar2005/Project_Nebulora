@@ -135,7 +135,7 @@ class searchClass {
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             
-            if (!zeroWindowPruning<expectedType>(env, nodePtr)) {
+            if (zeroWindowPruning<expectedType>(env, nodePtr)) {
 
                 // ALL ==> CUT, CUT ==> ALL, PV ==> PV
                 constexpr int8_t nodePattern[] = {CUT, ALL, PV};
@@ -199,7 +199,7 @@ class searchClass {
                 
                 bool isFirstMove = i == baseNodePtr->movesN;
 
-                if ( isFirstMove || !zeroWindowPruning<PV>(env, baseNodePtr) ) {
+                if ( isFirstMove || zeroWindowPruning<PV>(env, baseNodePtr) ) {
 
                     setupNode<false>(env, baseNodePtr);
                     baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr + 1);
@@ -571,7 +571,7 @@ class searchClass {
             using namespace nodeType;
 
             //zero window pruning is only attempted in pv nodes
-            if constexpr (expectedType != PV) { return false; }
+            if constexpr (expectedType != PV) { return true; }
 
             setupNode<true>(env, nodePtr); //zeroWindow = true
             nodePtr->currentEval = -negaMax<CUT>(env, nodePtr + 1);
@@ -579,8 +579,8 @@ class searchClass {
             //does this move need a full search?
             bool failLow  = nodePtr->currentEval <= nodePtr->alpha;
             bool failHigh = nodePtr->currentEval >= nodePtr->beta;
-            bool pruneFullSearch = failLow | failHigh;
-            return pruneFullSearch;
+            bool needsFullSearch = !(failLow | failHigh);
+            return needsFullSearch;
         }
 
         template<int8_t expectedType>
