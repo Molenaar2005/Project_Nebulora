@@ -106,8 +106,7 @@ class searchClass {
 
         //try an early reaturn from the TT table.
         //ttEarlyReturn writes the ttScore to nodePtr->bestEval when an early return is possible.
-        TTentryStruct* ttEntryPtr = env.tt.probeTT(env, nodePtr);
-        if (ttEarlyReturn<expectedType>(env, ttEntryPtr, nodePtr)) { return nodePtr->bestEval;}
+        if (ttEarlyReturn<expectedType>(env, nodePtr)) { return nodePtr->bestEval;}
 
         //if this is a leaf node then it requires a quiescence call. depth < onePly is for later support for fractional reductions.
         //NOTE: nodesetup is redundant if this is a call to quiescence since it does the same internally. Point for improvement.
@@ -123,7 +122,7 @@ class searchClass {
         if (isGameEndingState(env, nodePtr)) { return nodePtr->bestEval; }
 
         //sort all the moves
-        env.moveSorter.negaMax(env.board, nodePtr, ttEntryPtr);
+        env.moveSorter.negaMax(env.board, nodePtr);
 
         //evaluate the pv move if inside a pv node
         bool earlyReturn = searchPVMove<expectedType>(env, nodePtr);
@@ -188,8 +187,7 @@ class searchClass {
             baseNodePtr->depth += depth::ply;
 
             //root does not use a movepicker to prevent regenerating moves
-            TTentryStruct* ttEntryPtr = env.tt.probeTT(env, baseNodePtr);
-            env.moveSorter.negaMax(env.board, baseNodePtr, ttEntryPtr);
+            env.moveSorter.negaMax(env.board, baseNodePtr);
             env.moveSorter.insertionSort(baseNodePtr->currMovePtr - baseNodePtr->movesN, baseNodePtr->currMovePtr);
 
             //evaluate all the moves
@@ -225,6 +223,8 @@ class searchClass {
 
             baseNodePtr->trueType = nodeType::PV; //can change for aspiration windows
             env.tt.updateTT(env, baseNodePtr);
+            baseNodePtr->ttMove = env.tt.probeTTMove(env.board);
+            baseNodePtr->TTHit = baseNodePtr->ttMove != 0;
 
             prinInfoLine(baseNodePtr, env, startTime);
 
@@ -250,6 +250,7 @@ class searchClass {
             nodePtr->unMakeInfo          = 0;
 
             nodePtr->bestMove    = 0;
+            nodePtr->ttMove      = env.tt.probeTTMove(env.board);
             nodePtr->currentEval = 0;
             nodePtr->shiftMargin = 0;
             nodePtr->staticEval  = env.evaluation.static_evaluation<false>(env.board);
@@ -266,9 +267,9 @@ class searchClass {
             nodePtr->trueType      = nodeType::upperBound; //an eval below alpha is an upperbound
             nodePtr->movesN        = 0;
             nodePtr->ply           = 0;
-            nodePtr->TTIsCapture   = 0;
+            nodePtr->TTIsCapture   = 0; //unused for now
             nodePtr->inCheck       = env.board.inCheck();
-            nodePtr->TTHit         = 0;
+            nodePtr->TTHit         = nodePtr->ttMove != 0;
 
             env.selDepth = std::max(env.selDepth, nodePtr->ply);
             env.nodes++;
@@ -418,13 +419,18 @@ class searchClass {
         }
 
         template<int8_t expectedType>
-        bool ttEarlyReturn(searchEnvStruct& env, TTentryStruct* ttEntryPtr, searchNodeStruct* nodePtr) {
+        bool ttEarlyReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
             using namespace nodeType;
             using namespace packedBits;
 
+            TTentryStruct* ttEntryPtr = env.tt.probeTT(env, nodePtr);
+            nodePtr->TTHit = ttEntryPtr != nullptr;
+
             if (!nodePtr->TTHit) { //no tt hit
+                nodePtr->ttMove = 0;
                 return false;
             }
+            nodePtr->ttMove = ttEntryPtr->move;
 
             uint16_t ttEntrydepth = ttEntryPtr->meta & uint16_t(fourteenBits);
             uint16_t ttNodeType   = ttEntryPtr->meta >> 14; // top 2 bits

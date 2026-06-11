@@ -87,25 +87,26 @@ struct alignas(64) searchNodeStruct {
     uint64_t unMakeInfo;           // 8 32
 
     uint16_t bestMove;             // 2 34
-    int16_t currentEval;           // 2 36
-    int16_t shiftMargin;           // 2 38
-    int16_t staticEval;            // 2 40
-    int16_t reduction;             // 2 42
-    int16_t extension;             // 2 44
-    int16_t bestEval;              // 2 46
-    int16_t stash;                 // 2 48
-    int16_t depth;                 // 2 50
-    int16_t alpha;                 // 2 52
-    int16_t beta;                  // 2 54
+    uint16_t ttMove;               // 2 36
+    int16_t currentEval;           // 2 38
+    int16_t shiftMargin;           // 2 40
+    int16_t staticEval;            // 2 42
+    int16_t reduction;             // 2 44
+    int16_t extension;             // 2 46
+    int16_t bestEval;              // 2 48
+    int16_t stash;                 // 2 50
+    int16_t depth;                 // 2 52
+    int16_t alpha;                 // 2 54
+    int16_t beta;                  // 2 56
     
-    uint8_t lockedSquare;          // 1 55
-    uint8_t historyMovesN;         // 1 56
-    uint8_t trueType;              // 1 57    
-    uint8_t movesN;                // 1 58
-    uint8_t ply;                   // 1 59
-    bool TTIsCapture;              // 1 60
-    bool inCheck;                  // 1 61
-    bool TTHit;                    // 1 62
+    uint8_t lockedSquare;          // 1 57
+    uint8_t historyMovesN;         // 1 58
+    uint8_t trueType;              // 1 59    
+    uint8_t movesN;                // 1 60
+    uint8_t ply;                   // 1 61
+    bool TTIsCapture;              // 1 62
+    bool inCheck;                  // 1 63
+    bool TTHit;                    // 1 64
 };
 
 

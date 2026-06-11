@@ -96,14 +96,9 @@ class moveOrderingClass {
                 int16_t isDefended     = ((1ULL << targetIndex) & seenByOpponent) != 0;            
                 iMovePtr->value        = materialGain + promotionvalue - (materialLoss + promotionvalue) * isDefended;
             }
-
-        //Search loops backwards over the moves for improved cache locality. As a result the moves need to be sorted
-        //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
-        //empty slot after all the moves.
-        //insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
 
-        void negaMax(boardClass& board, searchNodeStruct* nodePtr, TTentryStruct* ttEntryPtr) {
+        void negaMax(boardClass& board, searchNodeStruct* nodePtr) {
             using namespace moveOrderingConstatns;
             using namespace packedBits;
             using namespace constants;
@@ -120,7 +115,7 @@ class moveOrderingClass {
             moveStruct* iMovePtr = nodePtr->currMovePtr; //copy pointer
 
             const uint64_t seenByOpponent = nodePtr->seenByOpponent;
-            const uint16_t ttMove = (ttEntryPtr != nullptr) ? ttEntryPtr->move : 0;
+            const uint16_t ttMove = nodePtr->ttMove;
             const uint16_t firstKillerMove  = getFirstKillerMove(nodePtr);
             const uint16_t secondKillerMove = getSecondKillerMove(nodePtr);
 
@@ -171,11 +166,6 @@ class moveOrderingClass {
                     iMovePtr->value = history[startingType * 64 + targetIndex];
                 }
             }
-
-        //Search loops backwards over the moves for improved cache locality. As a result the moves need to be sorted
-        //from low to high value. This is also why the LastMovePtr is the start of the array and the firstEmptyMovePtr is the first
-        //empty slot after all the moves.
-        //insertionSort(nodePtr->currMovePtr - nodePtr->movesN, nodePtr->currMovePtr);
     }
 
         moveStruct* movePicker(searchNodeStruct* nodePtr) {

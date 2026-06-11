@@ -140,10 +140,7 @@ class transpositionTableClass {
                 returnPtr |= reinterpret_cast<uintptr_t>(matchFound ? &currentEntry[i] : nullptr);
             }
 
-            nodePtr->TTHit = returnPtr != 0;
-            
             return reinterpret_cast<TTentryStruct*>(returnPtr);
-            
         }
 
         void resizeTT(uint64_t TTSizeMb) {
