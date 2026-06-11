@@ -448,7 +448,7 @@ class searchClass {
             
             //tt early returns can miss repetitions in some situations so a bestEval update
             //and early return is disabled. (bestMove is still used in move ordering)
-            bool isPVNode = ttNodeType == PV;
+            bool isPVNode = expectedType == PV;
             bool earlyReturnPossible = (allTypeReturn | cutTypeReturn | pvTypeReturn) & !isPVNode;
 
             nodePtr->bestEval = earlyReturnPossible ? correctedScore : nodePtr->bestEval;
