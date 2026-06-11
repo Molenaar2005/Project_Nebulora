@@ -62,7 +62,6 @@ class searchClass {
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
             nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
-            nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<false, false>(nodePtr->currMovePtr->move);
 
@@ -134,7 +133,6 @@ class searchClass {
         //evaluate all the moves
         while (nodePtr->movesN > 0) {
             nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
-            nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             
@@ -603,7 +601,6 @@ class searchClass {
 
 
             nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
-            nodePtr->movesN--;
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
             

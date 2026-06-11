@@ -199,6 +199,7 @@ class moveOrderingClass {
 
             //swap the best element to the end
             std::swap(*bestPtr, *topPtr);
+            nodePtr->movesN--;
 
             return topPtr;
         }
