@@ -154,7 +154,7 @@ class searchClass {
             if (isBetaCut) { return nodePtr->bestEval; }
         }
 
-        /*if no early return has been triggered in the move loop and the best score is lowerbound (CUT type) then it is a PV node*/
+        /*if no early return has been triggered in the move loop and the best score is lowerbound then it is a PV node*/
         nodePtr->trueType = (nodePtr->trueType == lowerBound) ? PV : ALL;
         env.tt.updateTT(env, nodePtr);
 
@@ -244,10 +244,10 @@ class searchClass {
 
             searchNodeStruct* nodePtr = &searchStack[0];
 
-            nodePtr->currMovePtr         = &env.moveGenerator.moveStack[0];
-            nodePtr->historyCurrMovePtr  = &env.moveSorter.historyStack[0];
-            nodePtr->seenByOpponent      = 0;
-            nodePtr->unMakeInfo          = 0;
+            nodePtr->currMovePtr    = &env.moveGenerator.moveStack[0];
+            nodePtr->quietsPtr      = &env.moveSorter.historyStack[0];
+            nodePtr->seenByOpponent = 0;
+            nodePtr->unMakeInfo     = 0;
 
             nodePtr->bestMove    = 0;
             nodePtr->ttMove      = env.tt.probeTTMove(env.board);
@@ -262,14 +262,14 @@ class searchClass {
             nodePtr->alpha       = -constants::inf;
             nodePtr->beta        = constants::inf;
             
-            nodePtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
-            nodePtr->historyMovesN = 0;
-            nodePtr->trueType      = nodeType::upperBound; //an eval below alpha is an upperbound
-            nodePtr->movesN        = 0;
-            nodePtr->ply           = 0;
-            nodePtr->TTIsCapture   = 0; //unused for now
-            nodePtr->inCheck       = env.board.inCheck();
-            nodePtr->TTHit         = nodePtr->ttMove != 0;
+            nodePtr->lockedSquare   = std::numeric_limits<int16_t>::max(); //flag meaning unused
+            nodePtr->quietsSearched = 0;
+            nodePtr->trueType       = nodeType::upperBound; //an eval below alpha is an upperbound
+            nodePtr->movesN         = 0;
+            nodePtr->ply            = 0;
+            nodePtr->TTIsCapture    = 0; //unused for now
+            nodePtr->inCheck        = env.board.inCheck();
+            nodePtr->TTHit          = nodePtr->ttMove != 0;
 
             env.selDepth = std::max(env.selDepth, nodePtr->ply);
             env.nodes++;
@@ -372,10 +372,10 @@ class searchClass {
 
             searchNodeStruct* childPtr = parentPtr + 1; //next frame in the stack
 
-            childPtr->currMovePtr         = parentPtr->currMovePtr + 1;
-            childPtr->historyCurrMovePtr  = parentPtr->historyCurrMovePtr;
-            childPtr->seenByOpponent      = 0;
-            childPtr->unMakeInfo          = 0;
+            childPtr->currMovePtr    = parentPtr->currMovePtr + 1;
+            childPtr->quietsPtr      = parentPtr->quietsPtr;
+            childPtr->seenByOpponent = 0;
+            childPtr->unMakeInfo     = 0;
 
             childPtr->bestMove    = 0;
             childPtr->currentEval = 0;
@@ -389,14 +389,14 @@ class searchClass {
             childPtr->alpha       = -(parentPtr->beta + parentPtr->shiftMargin);
             childPtr->beta        = -(parentPtr->alpha + parentPtr->shiftMargin);
             
-            childPtr->lockedSquare  = std::numeric_limits<int16_t>::max(); //flag meaning unused
-            childPtr->historyMovesN = 0;
-            childPtr->trueType      = nodeType::upperBound; //an eval below alpha is an upperbound
-            childPtr->movesN        = 0;
-            childPtr->ply           = parentPtr->ply + 1;
-            childPtr->TTIsCapture   = 0;
-            childPtr->inCheck       = env.board.inCheck();
-            childPtr->TTHit         = 0;
+            childPtr->lockedSquare   = std::numeric_limits<int16_t>::max(); //flag meaning unused
+            childPtr->quietsSearched = 0;
+            childPtr->trueType       = nodeType::upperBound; //an eval below alpha is an upperbound
+            childPtr->movesN         = 0;
+            childPtr->ply            = parentPtr->ply + 1;
+            childPtr->TTIsCapture    = 0;
+            childPtr->inCheck        = env.board.inCheck();
+            childPtr->TTHit          = 0;
 
             env.selDepth = std::max(env.selDepth, childPtr->ply);
             env.nodes++;
@@ -501,7 +501,7 @@ class searchClass {
                 bool isNonCapture = env.board.pieceAt[(((nodePtr->currMovePtr->move >> 6) & 0b111111))] == constants::emptySquare; //does not handle enpassant
                 if (isNonCapture) {
                     env.moveSorter.updateKillerMoves(env.board, nodePtr);
-                    env.moveSorter.markLastMoveAsBetaCut(nodePtr->historyCurrMovePtr);
+                    env.moveSorter.markLastMoveAsBetaCut(nodePtr->quietsPtr);
                 }
                 env.moveSorter.updateHistory(nodePtr);
                 env.tt.updateTT(env, nodePtr);

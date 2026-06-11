@@ -348,12 +348,12 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
 
         //repack and write to the history stack
         //targetIndex (6)  | startingType (4)
-        *(nodePtr->historyCurrMovePtr) = uint16_t((targetIndex << 4) | startPieceType);
+        *(nodePtr->quietsPtr) = uint16_t((targetIndex << 4) | startPieceType);
 
         //if this move is a capture then it shouldn't be saved
         uint16_t isNonCapture = targetPieceType == emptySquare;
-        nodePtr->historyCurrMovePtr += isNonCapture;
-        nodePtr->historyMovesN += isNonCapture;
+        nodePtr->quietsPtr += isNonCapture;
+        nodePtr->quietsSearched += isNonCapture;
     }
 
     //white enpassant to the left

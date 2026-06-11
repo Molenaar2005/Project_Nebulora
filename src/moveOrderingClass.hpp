@@ -46,11 +46,11 @@ class moveOrderingClass {
 
         void updateHistory(searchNodeStruct* nodePtr) {
 
-            uint16_t* iMovePtr = nodePtr->historyCurrMovePtr;
+            uint16_t* iMovePtr = nodePtr->quietsPtr;
             int16_t depth = int16_t(nodePtr->depth / depth::ply); //depth in ply
 
             //reward or penalize all the moves in the stack
-            for (int i = nodePtr->historyMovesN; i > 0; i--) {
+            for (int i = nodePtr->quietsSearched; i > 0; i--) {
                 iMovePtr--;
                 applyHistoryBonus(*iMovePtr, depth);
             }
@@ -60,8 +60,8 @@ class moveOrderingClass {
             for (int16_t &i:history) { i /= 4; }
         }
 
-        void markLastMoveAsBetaCut(uint16_t* historyCurrMovePtr) {
-            *(historyCurrMovePtr - 1) |= uint16_t(1ULL << 10);
+        void markLastMoveAsBetaCut(uint16_t* quietsPtr) {
+            *(quietsPtr - 1) |= uint16_t(1ULL << 10);
         }
 
 

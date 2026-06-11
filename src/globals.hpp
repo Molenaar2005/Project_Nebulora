@@ -82,7 +82,7 @@ struct alignas(4) moveStruct {
 struct alignas(64) searchNodeStruct {
 
     moveStruct* currMovePtr;       // 8 8
-    uint16_t* historyCurrMovePtr;  // 8 16
+    uint16_t* quietsPtr;  // 8 16
     uint64_t seenByOpponent;       // 8 24
     uint64_t unMakeInfo;           // 8 32
 
@@ -100,7 +100,7 @@ struct alignas(64) searchNodeStruct {
     int16_t beta;                  // 2 56
     
     uint8_t lockedSquare;          // 1 57
-    uint8_t historyMovesN;         // 1 58
+    uint8_t quietsSearched;         // 1 58
     uint8_t trueType;              // 1 59    
     uint8_t movesN;                // 1 60
     uint8_t ply;                   // 1 61
