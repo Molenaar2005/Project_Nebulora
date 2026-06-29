@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -20,7 +20,7 @@ If not, see https://www.gnu.org/licenses/.
 #include<iostream>
 
 #include "globals.hpp"
-#include "boardclass.hpp"
+#include "boardClass.hpp"
 #include "moveGeneratorClass.hpp"
 #include "moveOrderingClass.hpp"
 #include "evaluationClass.hpp"
@@ -33,7 +33,7 @@ class searchClass {
 
     public:
     alignas(64) std::array<searchNodeStruct, depth::maxPly> searchStack; //allignment is redundant since the struct is already alligned
-    
+
 
     int16_t quiescenceSearch(searchEnvStruct& env, searchNodeStruct* nodePtr){
 
@@ -50,10 +50,10 @@ class searchClass {
         nodePtr->bestEval = nodePtr->staticEval;
         if (nodePtr->bestEval >= nodePtr->beta) {
             return nodePtr->bestEval; //beta cut off
-        } 
+        }
         nodePtr->alpha = std::max(nodePtr->alpha, nodePtr->bestEval);
 
-        
+
         //generate and sort moves
         env.moveGenerator.quiescenceMoves(env.board, nodePtr->currMovePtr, nodePtr); //updates nodePtr
         env.moveSorter.quiescence(env.board, nodePtr);
@@ -114,7 +114,7 @@ class searchClass {
 
         //Null move pruning
         if (nullMovePruning<expectedType>(env, nodePtr)) {return nodePtr->beta;}
-        
+
         //generate all legal moves
         env.moveGenerator.legalMoves(env.board, nodePtr->currMovePtr, nodePtr);
 
@@ -134,7 +134,7 @@ class searchClass {
             nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            
+
             if (zeroWindowPruning<expectedType>(env, nodePtr)) {
 
                 // ALL ==> CUT, CUT ==> ALL, PV ==> PV
@@ -144,12 +144,12 @@ class searchClass {
                 setupNode<false>(env, nodePtr);
                 nodePtr->currentEval = -negaMax<expectedChildType>(env, nodePtr + 1);
             }
-            
+
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
-            
+
             //return immidiatly if out of time or the node budget is reached.
             if (hardLimitReached(env)) [[unlikely]] { return -constants::inf; }
-            
+
             bool isBetaCut = updateNodePtr(env, nodePtr);
             if (isBetaCut) { return nodePtr->bestEval; }
         }
@@ -196,7 +196,7 @@ class searchClass {
                 currMovePtrCopy--;
 
                 baseNodePtr->unMakeInfo = env.board.makeMove<true, false>(currMovePtrCopy->move, &env);
-                
+
                 bool isFirstMove = i == baseNodePtr->movesN;
 
                 if ( isFirstMove || zeroWindowPruning<PV>(env, baseNodePtr) ) {
@@ -204,13 +204,13 @@ class searchClass {
                     setupNode<false>(env, baseNodePtr);
                     baseNodePtr->currentEval = -negaMax<PV>(env, baseNodePtr + 1);
                 }
-                
+
                 env.board.unMakeMove(baseNodePtr->unMakeInfo, currMovePtrCopy->move);
 
                 //return immidiatly if out of time or the node budget is reached.
                 if (hardLimitReached(env)) [[unlikely]] {
                     std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove) << '\n';
-                    ctx.maxNodes = env.nodes;  
+                    ctx.maxNodes = env.nodes;
                     return;
                 }
 
@@ -230,9 +230,9 @@ class searchClass {
 
         } while ((baseNodePtr->depth < maxDepth));
 
-        std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove) << '\n'; 
-        ctx.maxNodes = env.nodes;  
- 
+        std::cout << "bestmove " << env.board.moveToCoordinates(baseNodePtr->bestMove) << '\n';
+        ctx.maxNodes = env.nodes;
+
     }
 
 
@@ -260,8 +260,8 @@ class searchClass {
             nodePtr->depth       = 0;
             nodePtr->alpha       = -constants::inf;
             nodePtr->beta        = constants::inf;
-            
-            nodePtr->lockedSquare   = std::numeric_limits<int16_t>::max(); //flag meaning unused
+
+            nodePtr->lockedSquare   = std::numeric_limits<uint8_t>::max(); //flag meaning unused
             nodePtr->quietsSearched = 0;
             nodePtr->trueType       = nodeType::upperBound; //an eval below alpha is an upperbound
             nodePtr->movesN         = 0;
@@ -272,7 +272,7 @@ class searchClass {
 
             env.selDepth = std::max(env.selDepth, nodePtr->ply);
             env.nodes++;
-            
+
             return nodePtr;
         }
 
@@ -292,7 +292,7 @@ class searchClass {
                 std::cout << "info string this position is a three fold repetition\n";
                 return false;
             }
-            
+
             if (baseNodePtr->movesN == 0) {
 
                 if (baseNodePtr->inCheck) {
@@ -308,12 +308,12 @@ class searchClass {
                 std::cout << "info string this position is a draw by the 50-move draw rule\n";
                 return false;
             }
-            
+
             return false;
         }
 
         std::string commandLineScore(searchEnvStruct& env, searchNodeStruct* baseNodePtr) {
-            
+
             //handle mating scores for the UCI protocol
             int16_t isMate = std::abs(baseNodePtr->alpha) > mateScores::mateThreshold;
             if (isMate) {
@@ -336,7 +336,7 @@ class searchClass {
                                     + env.tt.distribution[PV];
 
             uint64_t hashTotal = filledElements + env.tt.distribution[empty]; // hashTotal is never zero due to minium of 128 kb
-            
+
             if constexpr (showDetailedState) {
 
                 std::string detailedOutput = "";
@@ -357,7 +357,7 @@ class searchClass {
             std::cout << "info depth " << (baseNodePtr->depth / depth::ply)
                       << " seldepth "  << (uint16_t(env.selDepth))
                       << " score "     << commandLineScore(env, baseNodePtr)
-                      << " nodes "     << (env.nodes) 
+                      << " nodes "     << (env.nodes)
                       << " nps "       << ((1'000 * env.nodes) / currentSearchTime)
                       << " time "      << (currentSearchTime)
                       << " hashfull"   << hashState<false>(env)
@@ -387,8 +387,8 @@ class searchClass {
             childPtr->depth       = parentPtr->depth - parentPtr->reduction - depth::ply; //extentions are negative reductions
             childPtr->beta        = -(parentPtr->alpha + parentPtr->shiftMargin);
             childPtr->alpha       = zeroWindow ? (childPtr->beta - 1) : -(parentPtr->beta + parentPtr->shiftMargin);
-            
-            childPtr->lockedSquare   = std::numeric_limits<int16_t>::max(); //flag meaning unused
+
+            childPtr->lockedSquare   = std::numeric_limits<uint8_t>::max(); //flag meaning unused
             childPtr->quietsSearched = 0;
             childPtr->trueType       = nodeType::upperBound; //an eval below alpha is an upperbound
             childPtr->movesN         = 0;
@@ -400,18 +400,18 @@ class searchClass {
             env.selDepth = std::max(env.selDepth, childPtr->ply);
             env.nodes++;
         }
-    
+
         bool drawReturn(searchEnvStruct& env, searchNodeStruct* nodePtr) {
 
             if (env.board.fiftyMoveClockPly >= 100) [[unlikely]] {
                 return true; //draw if 100 half moves have not resulted in a reset
             }
 
-            if (nodePtr->ply > 2) [[likely]] { 
-                if ( env.board.isOneRepetition()  ) [[unlikley]] { return true; }
-            
+            if (nodePtr->ply > 2) [[likely]] {
+                if ( env.board.isOneRepetition()  ) [[unlikely]] { return true; }
+
             } else {
-                if ( env.board.isTwoRepetitions() ) [[unlikley]] { return true; }
+                if ( env.board.isTwoRepetitions() ) [[unlikely]] { return true; }
             }
 
             return false;
@@ -437,21 +437,21 @@ class searchClass {
             if (ttEntrydepth < nodePtr->depth) { //inssufficient depth for a return
                 return false;
             }
-    
+
             int16_t correctedScore = env.tt.localToMateScore(nodePtr, ttEntryPtr->eval);
 
             bool allTypeReturn = (ttNodeType == ALL) & (correctedScore <= nodePtr->alpha);
             bool cutTypeReturn = (ttNodeType == CUT) & (correctedScore >= nodePtr->beta);
             bool pvTypeReturn  = (ttNodeType == PV);
-            
-            
+
+
             //tt early returns can miss repetitions in some situations so a bestEval update
             //and early return is disabled. (bestMove is still used in move ordering)
             bool isPVNode = expectedType == PV;
             bool earlyReturnPossible = (allTypeReturn | cutTypeReturn | pvTypeReturn) & !isPVNode;
 
             nodePtr->bestEval = earlyReturnPossible ? correctedScore : nodePtr->bestEval;
-            
+
             return earlyReturnPossible;
         }
 
@@ -464,16 +464,16 @@ class searchClass {
 
             if ((env.endTime < std::chrono::high_resolution_clock::now()) || //out of time
                 (env.nodes >= env.maxNodes) /*node budget exceeded*/) [[unlikely]] {
-    
+
                 return true;
             }
 
             return false;
         }
-        
+
         bool isGameEndingState(searchEnvStruct& env, searchNodeStruct* nodePtr) {
 
-            if (nodePtr->movesN == 0) { 
+            if (nodePtr->movesN == 0) {
                 if (nodePtr->inCheck) { //is branchless faster here?
 
                     //forced mate
@@ -490,7 +490,7 @@ class searchClass {
         }
 
         bool updateNodePtr(searchEnvStruct& env, searchNodeStruct* nodePtr) {
-            
+
             /*this block of if statements can be reduced in terms of branches.*/
             if (nodePtr->currentEval >= nodePtr->beta) { //beta cutoff
                 nodePtr->bestMove = nodePtr->currMovePtr->move;
@@ -538,14 +538,14 @@ class searchClass {
 
             //reduce the null move search depth
             nodePtr->reduction = 2 * depth::ply + nodePtr->depth / 6; //very conservative
-            
+
             //searchNullMove
             nodePtr->unMakeInfo = env.board.makeNullMove();
 
             setupNode<false>(env, nodePtr);
             int16_t nullEval = -negaMax<nodeType::CUT>(env, nodePtr + 1);
             env.board.unMakeNullMove(nodePtr->unMakeInfo);
-            
+
             //restore the original depth
             nodePtr->reduction = 0;
 
@@ -594,15 +594,15 @@ class searchClass {
             nodePtr->currMovePtr = env.moveSorter.movePicker(nodePtr);
 
             nodePtr->unMakeInfo = env.board.makeMove<true, true>(nodePtr->currMovePtr->move, &env, nodePtr);
-            
+
             setupNode<false>(env, nodePtr);
             nodePtr->currentEval = -negaMax<PV>(env, nodePtr + 1);
-            
+
             env.board.unMakeMove(nodePtr->unMakeInfo, nodePtr->currMovePtr->move);
-            
+
             //return immidiatly if out of time or the node budget is reached.
             if (hardLimitReached(env)) [[unlikely]] { return true; }
-            
+
             bool isBetaCut = updateNodePtr(env, nodePtr);
             return isBetaCut;
         }

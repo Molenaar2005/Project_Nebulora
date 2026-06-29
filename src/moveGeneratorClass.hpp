@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -37,29 +37,29 @@ extern std::array<uint64_t, 4096>                 fromToTable;
 
 
 class moveGeneratorClass {
-    
+
     public:
 
 
-    
+
     alignas(64) std::array<moveStruct, 20'000> moveStack;
 
 
         void legalMoves(boardClass& board, moveStruct*& firstEmptyMovePtr, searchNodeStruct* returnNodePtr = nullptr) {
             using namespace constants;
-    
+
             //moveGenerator is a template function that allows unnecessary functions to be switched of based on gamestate.
             //so if for example white doesn't have queen side castling rights then the function shouldn't check if it can based on the boardposition.
-    
+
             //NOTE: For simplicity and early development onlyCaptures does not include enpassant captures.
 
             uint8_t kingCastlingAllowed  = (board.whiteToMove ? (whiteKingCastle  & board.castlingFlags) : (blackKingCastle  & board.castlingFlags)) != 0;
             uint8_t queenCastlingAllowed = (board.whiteToMove ? (whiteQueenCastle & board.castlingFlags) : (blackQueenCastle & board.castlingFlags)) != 0;
             uint8_t enpassantAllowed     = board.enpassantFiles != 0;
-    
-    
+
+
             uint8_t templateType = (enpassantAllowed << 3) | (queenCastlingAllowed << 2) | (kingCastlingAllowed << 1) | static_cast<uint8_t>(board.whiteToMove);
-    
+
             switch (templateType) {
                 case 0b00000: return moveGenerator<0b00000>(board, firstEmptyMovePtr, returnNodePtr);
                 case 0b00001: return moveGenerator<0b00001>(board, firstEmptyMovePtr, returnNodePtr);
@@ -80,18 +80,18 @@ class moveGeneratorClass {
                 default: std::cerr << "incorrect legalMoves template" << std::endl;
             }
         }
-        
+
         void quiescenceMoves(boardClass& board, moveStruct*& firstEmptyMovePtr, searchNodeStruct* returnNodePtr = nullptr) {
             using namespace constants;
-        
+
             //moveGenerator is a template function that allows unnecessary functions to be switched of based on gamestate.
-            
+
             //quiescence only produces captures and promotions.
 
 
             uint8_t enpassantAllowed     = board.enpassantFiles != 0;
             uint8_t templateType = (0b10000) | (enpassantAllowed << 3) | static_cast<uint8_t>(board.whiteToMove);
-        
+
             switch (templateType) {
 
                 case 0b10000: return moveGenerator<0b10000>(board, firstEmptyMovePtr, returnNodePtr);
@@ -101,7 +101,7 @@ class moveGeneratorClass {
                 default: std::cerr << "incorrect quiescenceMoves template" << std::endl;
             }
         }
-        
+
         uint64_t perftRoot(boardClass& board, uint8_t depth) {
             if (depth == 0) [[unlikely]] {std::cout << "\nTotal leafNodes: " << 1ULL << "\n\n"; return 0; }
 
@@ -115,7 +115,7 @@ class moveGeneratorClass {
                 firstEmptyPtr--;
 
                 moveStruct currMove = *firstEmptyPtr;
-                
+
                 uint64_t unMakeInfo = board.makeMove<false, false>(currMove.move);
                 uint64_t leafs = perftNode(board, depth - 1, firstEmptyPtr);
                 board.unMakeMove(unMakeInfo, currMove.move);
@@ -147,7 +147,7 @@ class moveGeneratorClass {
                 firstEmptyPtr--;
 
                 moveStruct currMove = *firstEmptyPtr;
-                
+
                 uint64_t unMakeInfo = board.makeMove<false, false>(currMove.move);
                 leafs += perftNode(board, depth - 1, firstEmptyPtr);
                 board.unMakeMove(unMakeInfo, currMove.move);
@@ -168,11 +168,11 @@ class moveGeneratorClass {
             const uint64_t seenByOpponent;
             const uint64_t friendlyBitboard;
             const uint64_t opponentBitboard;
-        
+
             const uint8_t friendlyKingIndex;
             const uint8_t checksN;
             moveStruct* firstEmptyMovePtr;
-        
+
             moveGenContextStruct(const boardClass& boardRef, moveStruct* baseMoveStackPtr) :
                 board(boardRef),
 
@@ -180,7 +180,7 @@ class moveGeneratorClass {
                 knights and pawns get themselves added and sliding pieces get themselves and the squares in between added.
                 this handles a single check perfectly except enpassant captures which get special logic. */
                 checkMask(generateCheckMask<whiteToMove>(boardRef)),
-                
+
                 /* define Horizontal-vertical and diagonal12 bitboards. This bitboard has all rays from the king to the checking piece
                 if the pinned piece is removed. So if a piece is not part of these bitboards then it can move freely. If it is part
                 of one of these bitboards then the targetsquare also has to be within this bitboard.
@@ -213,7 +213,7 @@ class moveGeneratorClass {
 
             //all the relevant moveGenerator variables are packed in a struct to reduce the amount of references that need to be passed.
             moveGenContextStruct<whiteToMove> moveGenContext(boardRef, baseMoveStackPtr);
-            
+
             //if there is a double check then only kingmoves may be valid
             bool onlyKingMoves = moveGenContext.checksN >= 2;
             if (!onlyKingMoves) {
@@ -233,9 +233,9 @@ class moveGeneratorClass {
 
             }
 
-            
+
             kingMoves<whiteToMove, inQuiescence, castleRights>(moveGenContext);
-            
+
 
             if (returnNodePtr != nullptr) { //is a ptr for metadata given? (yes for search, no for perft)
                 returnNodePtr->seenByOpponent = moveGenContext.seenByOpponent;
@@ -264,7 +264,7 @@ class moveGeneratorClass {
             so ray from my king to the pinning piece gets added to the pinmask.
             source: https://www.codeproject.com/Articles/5313417/Worlds-Fastest-Bitboard-Chess-Movegenerator */
 
-           
+
             //add knights
             uint64_t checkingPieces = seenByKnight[friendlyKingIndex] & opponentKnightBitboard;
             uint8_t checksN = std::popcount(checkingPieces);
@@ -278,21 +278,21 @@ class moveGeneratorClass {
             checkingPieces = seenByD12[friendlyKingIndex][_pext_u64(board.occupied[combined], attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
             checksN       += std::popcount(checkingPieces);
             checkMask     |= addToMask(friendlyKingIndex, checkingPieces);
-            
+
             //add Hv pieces
             checkingPieces = seenByHV[friendlyKingIndex][_pext_u64(board.occupied[combined], attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
             checksN       += std::popcount(checkingPieces);
             checkMask     |= addToMask(friendlyKingIndex, checkingPieces);
-            
+
             //add pawns
             { //all valid king squares for a valid pawn check from the left (prevent wrap arround checks)
                 uint64_t validKingSquares = friendlyKingBitboard & ~aFile;
-    
+
                 //shift to the startingsquare of that pawn and check if an enemy pawn exists at that square
                 constexpr int shiftValue = whiteToMove ? 7 : -9;
                 checkingPieces = opponentPawnBitboard & bitShift<shiftValue>(validKingSquares);
             }
-            
+
             { //all valid king squares for a valid pawn check from the right (prevent wrap arround checks)
                 uint64_t validKingSquares = (friendlyKingBitboard & ~hFile);
 
@@ -328,14 +328,14 @@ class moveGeneratorClass {
             const uint64_t opponentQueenBitboard = board.bitboard[whiteToMove ? blackQueen : whiteQueen];
             const uint64_t allOccupiedSquares    = board.occupied[combined];
             const uint8_t friendlyKingIndex      = std::countr_zero(board.bitboard[whiteToMove ? whiteKing : blackKing]);
-            
+
             //calculate the pinMaskHV
             //determine all pieces that might be pinned
             uint64_t potentialPins = seenByHV[friendlyKingIndex][_pext_u64(allOccupiedSquares, attackHV[friendlyKingIndex])];
-            
+
             //remove potentially pinned pieces and check if a pinning pieces hides behind it.
             potentialPins = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~potentialPins), attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
-            
+
             return addToMask(friendlyKingIndex, potentialPins);
         }
 
@@ -351,14 +351,14 @@ class moveGeneratorClass {
             const uint64_t opponentQueenBitboard  = board.bitboard[whiteToMove ? blackQueen  : whiteQueen ];
             const uint64_t allOccupiedSquares     = board.occupied[combined];
             const uint8_t friendlyKingIndex = std::countr_zero(board.bitboard[whiteToMove ? whiteKing : blackKing]);
-                        
+
             //calculate the pinMaskHV
             //determine all pieces that might be pinned
             uint64_t potentialPins = seenByD12[friendlyKingIndex][_pext_u64(allOccupiedSquares, attackD12[friendlyKingIndex])];
-            
+
             //remove potentially pinned pieces and check if a pinning pieces hides behind it.
             potentialPins = seenByD12[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~potentialPins), attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
-            
+
             return addToMask(friendlyKingIndex, potentialPins);
         }
 
@@ -367,7 +367,7 @@ class moveGeneratorClass {
             using namespace constants;
 
             const uint64_t friendlyPawns      = ctx.board.bitboard[whiteToMove ? whitePawn : blackPawn];
-            const uint64_t opponentHVPieces   = ctx.board.bitboard[whiteToMove ? blackRook : whiteRook] 
+            const uint64_t opponentHVPieces   = ctx.board.bitboard[whiteToMove ? blackRook : whiteRook]
                                               | ctx.board.bitboard[whiteToMove ? blackQueen : whiteQueen];
             const uint64_t allOccupiedSquares = ctx.board.occupied[combined];
             const uint64_t pinMaskD12         = ctx.pinMaskD12;
@@ -375,7 +375,7 @@ class moveGeneratorClass {
             const uint64_t checkMask          = ctx.checkMask;
             const uint64_t opponentBitboard   = ctx.opponentBitboard;
             const uint8_t  friendlyKingIndex  = ctx.friendlyKingIndex;
-            
+
             uint64_t enpassantCheckMask;
             uint64_t enpassantTargetMask;
             if constexpr (enpassantAllowed) {
@@ -387,11 +387,11 @@ class moveGeneratorClass {
             { //one forward
                 //one forward not pinned
                 constexpr int shiftValue = whiteToMove ? 8 : -8;
-                
+
                 //define the startingbitboard
                 uint64_t notPinned = friendlyPawns & ~pinMaskD12 & ~pinMaskHV;
                 uint64_t pinnedHV  = friendlyPawns & ~pinMaskD12 &  pinMaskHV; //only HV pins for oneforward
-                
+
                 //define the targetbitboard
                 uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
                         validTargetSquares |= bitShift<shiftValue>(pinnedHV) & pinMaskHV;
@@ -409,30 +409,30 @@ class moveGeneratorClass {
 
                 uint64_t notPinned = friendlyPawns & openingRank & ~pinMaskD12 & ~pinMaskHV;
                 uint64_t pinnedHV  = friendlyPawns & openingRank & ~pinMaskD12 &  pinMaskHV;
-                
+
                 //prune away non empty squares
                 uint64_t oneForwardNotPinned = bitShift<shiftValue>(notPinned);
                 uint64_t oneForwardPinnedHV  = bitShift<shiftValue>(pinnedHV);
                 oneForwardNotPinned &= ~allOccupiedSquares;
                 oneForwardPinnedHV  &= ~allOccupiedSquares;
-    
+
                 //filter out occupied, and check squares
                 uint64_t validTargetSquares  = bitShift<shiftValue>(oneForwardNotPinned);
                         validTargetSquares |= bitShift<shiftValue>(oneForwardPinnedHV) & pinMaskHV;
                         validTargetSquares &= ~allOccupiedSquares & checkMask;
-    
+
                 //add to the list
                 addPawnMove<whiteToMove, 2 * shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
 
             { //capture left
                 constexpr int shiftValue = whiteToMove ? 7 : -9;
-                            
+
                 //get all the startingSquares
                 uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | aFile);
                 uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~aFile;
-                
-                //find all the valid targetsquares              
+
+                //find all the valid targetsquares
                 uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
                         validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
                         validTargetSquares &= opponentBitboard & checkMask;
@@ -443,7 +443,7 @@ class moveGeneratorClass {
                     uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
                              enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
                              enpassantMove &= enpassantCheckMask & enpassantTargetMask;
-        
+
                     //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
                     //However because both are removed from this rank I need to check for this pin explicitly
                     uint64_t movedAndCapturedPawn = bitShift<whiteToMove ? -8 : 8>(enpassantMove) | bitShift<whiteToMove ? -7 : 9>(enpassantMove);
@@ -451,7 +451,7 @@ class moveGeneratorClass {
                     bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
                     validTargetSquares |= enpassantMove * legalEnpassantMove;
                 }
-    
+
                 //add to the list
                 addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
@@ -463,7 +463,7 @@ class moveGeneratorClass {
                 uint64_t notPinned = friendlyPawns & ~(pinMaskD12 | pinMaskHV | hFile);
                 uint64_t pinnedD12 = friendlyPawns & pinMaskD12 & ~hFile;
 
-                //find all the valid targetsquares              
+                //find all the valid targetsquares
                 uint64_t validTargetSquares  = bitShift<shiftValue>(notPinned);
                          validTargetSquares |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
                          validTargetSquares &= opponentBitboard & checkMask;
@@ -474,7 +474,7 @@ class moveGeneratorClass {
                     uint64_t enpassantMove  = bitShift<shiftValue>(notPinned);
                              enpassantMove |= bitShift<shiftValue>(pinnedD12) & pinMaskD12;
                              enpassantMove &= enpassantCheckMask & enpassantTargetMask;
-        
+
                     //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
                     //However because both are removed from this rank I need to check for this pin explicitly
                     uint64_t movedAndCapturedPawn = whiteToMove ? (bitShift<-8>(enpassantMove) | bitShift<-9>(enpassantMove)) : (bitShift<8>(enpassantMove) | bitShift<7>(enpassantMove));
@@ -482,7 +482,7 @@ class moveGeneratorClass {
                     bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
                     validTargetSquares |= enpassantMove * legalEnpassantMove;
                 }
-                
+
                 addPawnMove<whiteToMove, shiftValue, inQuiescence>(validTargetSquares, ctx);
             }
         }
@@ -494,12 +494,12 @@ class moveGeneratorClass {
             const uint64_t checkMask  = ctx.checkMask;
             const uint64_t pinMaskD12 = ctx.pinMaskD12;
             const uint64_t pinMaskHV  = ctx.pinMaskHV;
-            
+
             uint64_t toMove  = ctx.board.bitboard[whiteToMove ? whiteKnight : blackKnight];
                      toMove &= ~(pinMaskD12 | pinMaskHV);
 
             while (toMove != 0) {
-                
+
                 //get first piece, convert it to an index and remove it from toMove
                 uint64_t startingIndex = std::countr_zero(toMove);
                 toMove ^= 1ULL << startingIndex;
@@ -527,7 +527,7 @@ class moveGeneratorClass {
                      toMove &= ~pinMaskHV & (isPinned ? pinMaskD12 : ~pinMaskD12);
 
             while (toMove != 0) {
-                
+
                 //get first piece, convert it to an index and remove it from toMove
                 uint64_t startingIndex = std::countr_zero(toMove);
                 toMove ^= 1ULL << startingIndex;
@@ -592,7 +592,7 @@ class moveGeneratorClass {
 
             addMoves<whiteToMove, whiteKing, inQuiescence>(ctx.friendlyKingIndex, validTargetSquares, ctx);
         }
-            
+
         template<bool whiteToMove, bool kingSide>
         static uint64_t castlingMove(moveGenContextStruct<whiteToMove> &ctx) {
             using namespace constants;
@@ -602,14 +602,14 @@ class moveGeneratorClass {
             //half if it is black to move.
             uint64_t friendlyKingBitboard      = whiteToMove ? ctx.board.bitboard[whiteKing] : ctx.board.bitboard[blackKing];
             constexpr uint64_t shouldBeEmpty   = (kingSide ? 0b1100000ULL : 0b01110ULL) << (56 * !whiteToMove);
-            constexpr uint64_t shouldNotBeSeen = (kingSide ? 0b1110000ULL : 0b11100ULL) << (56 * !whiteToMove); 
-            constexpr uint64_t shiftValue      = kingSide ? 2 : -2;
+            constexpr uint64_t shouldNotBeSeen = (kingSide ? 0b1110000ULL : 0b11100ULL) << (56 * !whiteToMove);
             const uint64_t seenByOpponent      = ctx.seenByOpponent;
             const uint64_t allOccupiedSquares  = ctx.board.occupied[combined];
 
             bool castleAllowed = ((allOccupiedSquares & shouldBeEmpty)           //castlingSquares not empty
                                |  (seenByOpponent & shouldNotBeSeen  ) ) == 0;   //castling through an attacked square
 
+            constexpr int shiftValue = kingSide ? 2 : -2;
             return bitShift<shiftValue>(friendlyKingBitboard) * castleAllowed;
         }
 
@@ -649,7 +649,7 @@ class moveGeneratorClass {
 
             //loop over all the targetsquares
             while (validTargetSquares != 0) {
-                
+
                 //get and remove first targetsquare
                 uint64_t targetBitBoard = validTargetSquares & -validTargetSquares;
                 validTargetSquares ^= targetBitBoard;
@@ -685,7 +685,7 @@ class moveGeneratorClass {
             for (int counter = 0; counter < itterations; counter++) {
 
                 //get bitboard, convert to decimal index, remove from checkingpieces
-                uint64_t lowestBitBoard = checkingPieces & -checkingPieces; 
+                uint64_t lowestBitBoard = checkingPieces & -checkingPieces;
                 uint64_t targetIndex = std::countr_zero(lowestBitBoard);
                 checkingPieces ^= lowestBitBoard;
 
