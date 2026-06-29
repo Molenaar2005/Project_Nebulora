@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -17,7 +17,52 @@ If not, see https://www.gnu.org/licenses/.
 
 #include<cstdint>
 #include<chrono>
+#include<immintrin.h>
+#include<bit>
 
+
+#if defined(__BMI2__) //fall back if pext64 and pdep64 is not supported by the hardware
+
+    inline uint64_t pext_u64(uint64_t source, uint64_t mask) {
+        return _pext_u64(source, mask); // use intrinsic version as the default
+    }
+
+    inline uint64_t pdep_u64(uint64_t source, uint64_t mask) {
+        return _pdep_u64(source, mask); // use intrinsic version as the default
+    }
+
+#else
+
+    inline uint64_t pext_u64(uint64_t source, uint64_t mask) {
+        uint64_t sink = 0;
+
+        for (uint64_t bitSlot = 1; mask != 0; bitSlot <<= 1) {
+            uint64_t lsb = mask & -mask; //extracts the least significant bit
+
+            mask ^= lsb;
+
+            uint64_t isNonZero = (source & lsb) != 0;
+            sink |= bitSlot * isNonZero;
+        }
+
+        return sink;
+    }
+
+    inline uint64_t pdep_u64(uint64_t source, uint64_t mask) {
+        uint64_t sink = 0;
+
+        for (uint64_t bitSlot = 1; mask != 0; bitSlot <<= 1) {
+            uint64_t lsb = mask & -mask; //extract least significant bit
+            mask ^= lsb;
+
+            bool isNonZero = (source & bitSlot) != 0;
+            sink |= lsb * isNonZero;
+        }
+
+        return sink;
+    }
+
+#endif
 
 
 //########## forward declarations ############
@@ -49,7 +94,7 @@ namespace nodeType {
 
         upperBound = 0,
         lowerBound = 1
-    };  
+    };
 };
 
 namespace depth {
@@ -97,10 +142,10 @@ struct alignas(64) searchNodeStruct {
     int16_t depth;                 // 2 50
     int16_t alpha;                 // 2 52
     int16_t beta;                  // 2 54
-    
+
     uint8_t lockedSquare;          // 1 55
     uint8_t quietsSearched;        // 1 56
-    uint8_t trueType;              // 1 57    
+    uint8_t trueType;              // 1 57
     uint8_t movesN;                // 1 58
     uint8_t ply;                   // 1 59
     bool TTIsCapture;              // 1 60
@@ -110,7 +155,7 @@ struct alignas(64) searchNodeStruct {
 
 
 namespace constants {
-    
+
         enum pieceTypes : uint8_t {
             whitePawn   = 0,
             whiteRook   = 1,
@@ -125,20 +170,20 @@ namespace constants {
             blackQueen  = 10,
             blackKing   = 11,
             emptySquare = 12
-        };    
+        };
 
         enum occupancy : uint8_t {
             white    = 0,
             black    = 1,
             combined = 2
-        };    
+        };
 
         enum castlingTypes : uint8_t {
             whiteKingCastle  = 0b0001,
             whiteQueenCastle = 0b0010,
             blackKingCastle  = 0b0100,
             blackQueenCastle = 0b1000,
-        };    
+        };
 
         enum boardmasks : uint64_t {
             aFile       = 0x0101010101010101ULL,
@@ -194,7 +239,7 @@ namespace moveOrderingConstatns {
         packedMaterialValue = 0x0093351093351,
         packedPromotionValue = 0x0000000082240
     };
-    
+
 };
 
 
@@ -219,13 +264,13 @@ struct searchContextStruct {
 
    searchContextStruct( boardClass& boardRef, moveGeneratorClass& moveGeneratorRef, evaluationClass& evaluationRef,
                         moveOrderingClass& moveSorterRef, transpositionTableClass& ttRef, const int8_t contemptFactorParam = 0)
-                        
+
                         : //initializer list
                         board(boardRef), moveGenerator(moveGeneratorRef), evaluation(evaluationRef),
-                        moveSorter(moveSorterRef), tt(ttRef), contemptFactor(contemptFactorParam) 
-                        
+                        moveSorter(moveSorterRef), tt(ttRef), contemptFactor(contemptFactorParam)
+
         { //constructor
-    
+
         //load in default values
         constexpr uint64_t inf = 100'000'000'000'000;
 

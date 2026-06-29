@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -93,14 +93,14 @@ class alignas(64) boardClass {
                 int fileIndex = 0;
                 int rankIndex = 7;
                 for (int i = 0; i < position.length(); i++) {
-    
+
                     int type = symbols.find(position[i], 0);
-   
+
                     if (type < 12) { //is it a pieceType
                         uint8_t squareIndex = 8 * rankIndex + fileIndex;
                         uint64_t squareBitboard  = 1ULL << squareIndex;
                         uint8_t pieceColor = type < 6 ? white : black;
-                        
+
                         bitboard[type] |= squareBitboard;
                         occupied[pieceColor] |= squareBitboard;
                         occupied[combined] |= squareBitboard;
@@ -108,34 +108,34 @@ class alignas(64) boardClass {
                         positionHash ^= zobristHashes[squareIndex * 13 + type];
 
                         fileIndex++;
-                    } else     
-                    
+                    } else
+
                     if (type > 12) { //skip empty squares
-                        
+
                         uint8_t emptyNSquares = type - 12;
                         fileIndex += emptyNSquares;
-                    } else    
+                    } else
                     { //skip to the new line
                         fileIndex = 0;
                         rankIndex--;
-                    }    
-                }   
-                
+                    }
+                }
 
-            }    
-            
+
+            }
+
             { //set the side to move
                 whiteToMove = toMove == "w";
                 positionHash ^= !whiteToMove * zobristHashes[hash::whiteToMoveHash];
-            }    
-            
+            }
+
             { //set all the castling rights
                 if (castling.find('K') != std::string::npos) {castlingFlags |= whiteKingCastle;  }
                 if (castling.find('Q') != std::string::npos) {castlingFlags |= whiteQueenCastle; }
                 if (castling.find('k') != std::string::npos) {castlingFlags |= blackKingCastle;  }
                 if (castling.find('q') != std::string::npos) {castlingFlags |= blackQueenCastle; }
                 positionHash ^= zobristHashes[hash::CastlingHash + castlingFlags];
-            }   
+            }
 
             { //set up the enpassant rights
                 const std::string files = "abcdefgh";
@@ -143,20 +143,20 @@ class alignas(64) boardClass {
                 if ((file = files.find(enpassant[0], 0)) != std::string::npos) {
                     enpassantFiles |= 1ULL << file;
                     positionHash ^= zobristHashes[hash::enPassantFileHash + file];
-                }    
-            }    
-            
+                }
+            }
+
             { //setup the boardcounters
                 fiftyMoveClockPly = halfMoveCounter;
                 moveClockPly = 2 * (moveCounter - 1) + !whiteToMove;
             }
-            
+
             {//setup the currenthasPtr
                 repetitionListPtr = &repetitionHashList[0];
                 *(repetitionListPtr++) = positionHash;
             }
-        }    
-        
+        }
+
 
         // I/O functions
         void visualizeBoard() {
@@ -248,7 +248,7 @@ class alignas(64) boardClass {
 
             return promotion << 12 | targetRank << 9 | targetFile << 6 | startingRank << 3 | startingFile;
         }
-        
+
         std::string moveToCoordinates(const uint16_t move){
             static constexpr char files[]      = "abcdefgh";
             static constexpr char ranks[]      = "12345678";
@@ -271,7 +271,7 @@ class alignas(64) boardClass {
             returnMove += files[targetFileIndex];
             returnMove += ranks[targetRankIndex];
             if (promotion != 0) {returnMove += promotions[promotion];}
-            
+
 
             return returnMove;
         }
@@ -323,7 +323,7 @@ class alignas(64) boardClass {
             occupied[combined]                    ^= startingBitBoard;
             pieceAt[startingIndex]                 = startPieceType;
             positionHash                          ^= zobristHashes[startingIndex * 13 + startPieceType];
-                
+
             //add back captured piece
             if (targetPieceType != emptySquare) {
                 bitboard[targetPieceType]             ^= targetBitBoard;
@@ -349,12 +349,12 @@ class alignas(64) boardClass {
             if ( ((startingIndex - 9) == targetIndex) && (startPieceType == blackPawn) && (targetPieceType == emptySquare)) [[unlikely]] {
                 enpassantCapture<false, false, true>(startingIndex);
             } else
-            
+
             //enpassant to the right
             if ( ((startingIndex - 7) == targetIndex) && (startPieceType == blackPawn) && (targetPieceType == emptySquare)) [[unlikely]] {
                 enpassantCapture<false, true, true>(startingIndex);
             } else
-            
+
             //castling queen side
             if ( (startPieceType == whiteKing) && (startingIndex - 2) == targetIndex) [[unlikely]] {
                 castledRook<true, false, true>();
@@ -411,7 +411,7 @@ class alignas(64) boardClass {
             fiftyMoveClockPly = fiftyMoveClockPly + 1;
             moveClockPly += 1;
             enpassantFiles = 0;
-            
+
             whiteToMove = !whiteToMove;
 
             //add the hash for castling changes and current enpassant state
@@ -440,7 +440,7 @@ class alignas(64) boardClass {
         }
 
 
-        
+
         //remaining functions
         bool inCheck(){
             if (whiteToMove) {
@@ -508,7 +508,7 @@ class alignas(64) boardClass {
 
 
 
-        private:    
+        private:
 
 
         //helper functions
@@ -523,8 +523,8 @@ class alignas(64) boardClass {
             castlingFlags = 0;
             enpassantFiles = 0;
             fiftyMoveClockPly = 0;
-        }    
-        
+        }
+
         template<bool whiteMoved, bool capturedToTheRight, bool undoMove>
         void enpassantCapture(const uint16_t& startingIndex){
             using namespace constants;
@@ -582,7 +582,7 @@ class alignas(64) boardClass {
             int opponentBishop = whiteSide ? blackBishop : whiteBishop;
             int opponentPawn   = whiteSide ? blackPawn : whitePawn;
 
-            
+
             int kingIndex = std::countr_zero(bitboard[friendlyKing]);
 
             //add knights
@@ -590,11 +590,11 @@ class alignas(64) boardClass {
             if (checkingPieces != 0) [[unlikely]] {return true;}
 
             //add D12 pieces
-            checkingPieces = seenByD12[kingIndex][_pext_u64(occupied[combined], attackD12[kingIndex])] & (bitboard[opponentBishop] | bitboard[opponentQueen]);
+            checkingPieces = seenByD12[kingIndex][pext_u64(occupied[combined], attackD12[kingIndex])] & (bitboard[opponentBishop] | bitboard[opponentQueen]);
             if (checkingPieces != 0) [[unlikely]] {return true;}
 
             //add HV pieces
-            checkingPieces = seenByHV[kingIndex][_pext_u64(occupied[combined], attackHV[kingIndex])] & (bitboard[opponentRook] | bitboard[opponentQueen]); //black rook and bishop
+            checkingPieces = seenByHV[kingIndex][pext_u64(occupied[combined], attackHV[kingIndex])] & (bitboard[opponentRook] | bitboard[opponentQueen]); //black rook and bishop
             if (checkingPieces != 0) [[unlikely]] {return true;}
 
             //add pawns
@@ -611,7 +611,7 @@ class alignas(64) boardClass {
 
         template<int shiftvalue>
         uint64_t bitShift(uint64_t unShifted) { //also initialized in moveGeneratorClass. Might be cleaner to make it a lambda.
-            
+
             if constexpr (shiftvalue >= 0) {
                 return unShifted << shiftvalue;
             } else {
@@ -620,7 +620,7 @@ class alignas(64) boardClass {
         }
 
 
-};        
+};
 
 
 

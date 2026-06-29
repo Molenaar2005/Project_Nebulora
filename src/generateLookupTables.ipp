@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -40,12 +40,12 @@ struct toEdgeData {
 
     toEdgeData(int startingIndex) {
         //calculate the distance to the edge
-        toEdge[3] = startingIndex % 8;        
-        toEdge[2] = (startingIndex - toEdge[3]) / 8;    
-        toEdge[1] = 7 - toEdge[3];    
-        toEdge[0] = 7 - toEdge[2]; 
-        toEdge[4] = std::min(toEdge[0], toEdge[1]);        
-        toEdge[5] = std::min(toEdge[1], toEdge[2]);        
+        toEdge[3] = startingIndex % 8;
+        toEdge[2] = (startingIndex - toEdge[3]) / 8;
+        toEdge[1] = 7 - toEdge[3];
+        toEdge[0] = 7 - toEdge[2];
+        toEdge[4] = std::min(toEdge[0], toEdge[1]);
+        toEdge[5] = std::min(toEdge[1], toEdge[2]);
         toEdge[6] = std::min(toEdge[2], toEdge[3]);
         toEdge[7] = std::min(toEdge[3], toEdge[0]);
     }
@@ -70,7 +70,7 @@ struct toEdgeData {
             //to the edge of the board
             for (int steps = 1; steps <= data.toEdge[direction]; steps++) {
                 uint64_t targetIndex = startingIndex + directions[direction] * steps;
-                
+
                 bitboard |= 1ULL << targetIndex;
 
                 fromToTable[startingIndex + 64 * targetIndex] = bitboard;
@@ -88,7 +88,7 @@ struct toEdgeData {
 
         toEdgeData data(startingIndex);
         attackHV[startingIndex] = 0ULL;
-        
+
         //create empty board mask
         uint64_t startingSquare = 1ULL << startingIndex;
 
@@ -117,7 +117,7 @@ struct toEdgeData {
         //loop over all directions
         for (int direction = 0; direction < 4; direction++) {
             for (int steps = 1; steps < data.toEdge[direction + 4]; steps++) {
-                
+
                 uint64_t startingSquare = 1ULL << startingIndex;
                 attackD12[startingIndex] |= bitShift(startingSquare, directions[direction] * steps);
             }
@@ -129,7 +129,7 @@ struct toEdgeData {
 
     //bunch of constants that describe how a king moves
     int kingMove[8] = { 8,  1,  -8,  -1,  9,  -7, -9,  7 };
-    
+
     //loop over all the squares
     for (int startingIndex = 0; startingIndex < 64; startingIndex++) {
 
@@ -138,7 +138,7 @@ struct toEdgeData {
 
         //check if the move is valid
         for (int direction = 0; direction < 8; direction++) {
-            
+
             //check if the target square is on the board
             if (data.toEdge[direction] > 0) {
 
@@ -157,7 +157,7 @@ struct toEdgeData {
     uint64_t toNorthKnight[8] = { 2,  1,  0,   0,   0,   0,  1,  2 };
     uint64_t toEastKnight[8]  = { 1,  2,  2,   1,   0,   0,  0,  0 };
     uint64_t toSouthKnight[8] = { 0,  0,  1,   2,   2,   1,  0,  0 };
-    uint64_t toWestKnight[8]  = { 0,  0,  0,   0,   1,   2,  2,  1 }; 
+    uint64_t toWestKnight[8]  = { 0,  0,  0,   0,   1,   2,  2,  1 };
 
     //loop over all the squares
     for (int startingIndex = 0; startingIndex < 64; startingIndex++) {
@@ -185,7 +185,7 @@ struct toEdgeData {
 { //seenByD12
 
     int directions[4] = {9, -7, -9, 7};
-   
+
     //loop over all the squares
     for (int startingIndex = 0; startingIndex < 64; startingIndex++) {
         uint64_t startingSquare = 1ULL << startingIndex;
@@ -198,7 +198,7 @@ struct toEdgeData {
         for (uint64_t attackBoard = 0; attackBoard < attackCombinations; attackBoard++) {
 
             //setup the arrangment of pieces on the board
-            uint64_t combined = _pdep_u64(attackBoard, attackD12[startingIndex]);
+            uint64_t combined = pdep_u64(attackBoard, attackD12[startingIndex]);
             seenByD12[startingIndex][attackBoard] = 0ULL;
 
             //calculate the possible moves
@@ -225,21 +225,21 @@ struct toEdgeData {
 { //seenByHV
 
     int directions[4] = {8, 1, -8, -1};
-   
+
     //loop over all the squares
     for (int startingIndex = 0; startingIndex < 64; startingIndex++) {
 
         uint64_t startingSquare = 1ULL << startingIndex;
 
         toEdgeData data(startingIndex);
-        
+
         //loop over all the possible attack boards for that square
         uint64_t bitCombinations = 1ULL << (std::popcount(attackHV[startingIndex]));
 
         for (uint64_t attackBoard = 0; attackBoard < bitCombinations; attackBoard++) {
 
             //setup the arrangment of pieces on the board
-            uint64_t combined = _pdep_u64(attackBoard, attackHV[startingIndex]);
+            uint64_t combined = pdep_u64(attackBoard, attackHV[startingIndex]);
             seenByHV[startingIndex][attackBoard] = 0ULL;
 
             //calculate the possible moves

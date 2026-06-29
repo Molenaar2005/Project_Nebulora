@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -20,7 +20,7 @@ If not, see https://www.gnu.org/licenses/.
 #include<vector>
 #include<array>
 #include<limits>
-#include<intrin.h> //for prefetching the transposition table
+#include<immintrin.h> //for prefetching the transposition table
 
 #include "globals.hpp"
 #include "boardClass.hpp"
@@ -55,23 +55,23 @@ class transpositionTableClass {
 
         void newGeneration() {
             currentGeneration++;
-        }    
+        }
 
         void updateTT(searchEnvStruct& env, searchNodeStruct* nodePtr){
             /* The transposition table is a design with buckets meaning every index (derived from the position hash) contains four entries. Multiple entries allows for more control
             over which entries are kept or rejected and four is the maximum that would fit in a cacheline of 64 bytes. When the transposition table is updated with a new entry
             it is compared and the least usefull (could be the new entry) is rejected. This is done by ranking them based on desired statistics. First generation, this
             keeps the entries relevant. Next based on depth since higher depths can save more searchtime. Next based on node type exact > lower > upper. Next based on eval.
-            
+
             Important things to note:
             -keep old or new entry but don't keep multiple entries of the same hash.
             -prefer filling an empty slot over replacing another (unless it would duplicate this hash)
             */
-           
+
             // NOTE: Can be heavily optimized with SIMD.
             constexpr int64_t doubleBias = -10'000'000'000'000;
             constexpr int64_t emptyBias  = -1'000'000'000'000;
-           
+
             TTentryStruct newEntry = assembleNewEntry(env, nodePtr);
 
             //current entry
@@ -82,25 +82,25 @@ class transpositionTableClass {
             uint64_t currentBucketIndex = (uint64_t(uint32_t(newEntry.hash >> 32ULL)) * ttBuckets) >> 32;
             TTentryStruct* ttEntry = &TT[currentBucketIndex].entry[0];
             */
-            
-            
+
+
             int64_t newEntryScore = ttEntryScore(newEntry);
-            
-            
+
+
             //find the least valuable entry in the bucket
             uint8_t lowestValueIndex = 5; //fifth element does not exist
             int64_t lowestScore = std::numeric_limits<int64_t>::max();
             for (uint8_t i = 0; i < 4; i++) { //this loop can most likely be vectorized with SIMD
-                
+
                 int64_t currentEntryScore = ttEntryScore(ttEntry[i]);
                 currentEntryScore        -= -doubleBias * (ttEntry[i].hash == newEntry.hash);
                 currentEntryScore        -= -emptyBias  * (ttEntry[i].hash == 0ULL);
-                
+
                 bool scoreDecreased = lowestScore > currentEntryScore;
                 lowestValueIndex    = scoreDecreased ? i : lowestValueIndex;
                 lowestScore         = scoreDecreased ? currentEntryScore : lowestScore;
             }
-            
+
             //replace if the new entry is considered more valuable then the current entry
             newEntryScore  -= -doubleBias * (ttEntry[lowestValueIndex].hash == newEntry.hash);
             newEntryScore  -= -emptyBias  * (ttEntry[lowestValueIndex].hash == 0ULL);
@@ -117,7 +117,7 @@ class transpositionTableClass {
             //TT scores are not reliable when close to the 50 move draw rule.
             uint64_t requestedHash = env.board.positionHash;
             if ((env.board.fiftyMoveClockPly > 80) | (requestedHash == 0)) { return nullptr;}
-            
+
             //find out what bucket it is located in
             const void* bucketPtr = ttBucketPtr(requestedHash);
             TTentryStruct* currentEntry = static_cast<TTentryStruct*>(const_cast<void*>(bucketPtr));
@@ -125,7 +125,7 @@ class transpositionTableClass {
             uint64_t currentBucketIndex = (uint64_t(uint32_t(requestedHash >> 32ULL)) * ttBuckets) >> 32;
             TTentryStruct* currentEntry = &TT[currentBucketIndex].entry[0];
             */
-            
+
             //loop over all the entries to find a matching hash
             uintptr_t returnPtr = reinterpret_cast<uintptr_t>(nullptr);
             for (uint8_t i = 0; i < 4; i++) {
@@ -136,7 +136,7 @@ class transpositionTableClass {
                 the memory adress to be marked as M under the MESI memory protocol. It doesn't hurt
                 now for single threaded performance.
                 */
-                currentEntry[i].generation = matchFound ? currentGeneration : currentEntry[i].generation; 
+                currentEntry[i].generation = matchFound ? currentGeneration : currentEntry[i].generation;
                 returnPtr |= reinterpret_cast<uintptr_t>(matchFound ? &currentEntry[i] : nullptr);
             }
 
@@ -146,10 +146,10 @@ class transpositionTableClass {
         void resizeTT(uint64_t TTSizeMb) {
 
             //lower limit for hash size is for search stability
-            ttBuckets = std::max(TTSizeMb, 128ULL) * 1'000'000 / sizeof(ttBucket);
+            ttBuckets = std::max(TTSizeMb, uint64_t(128)) * 1'000'000 / sizeof(ttBucket);
 
             //upper limit due to multiplicative hashing limits
-            ttBuckets = std::min(ttBuckets,  1ULL << 32);
+            ttBuckets = std::min(ttBuckets,  uint64_t(1) << 32);
 
             //setup the hash table
             distribution = {0, 0, 0, ttBuckets * 4};
@@ -161,7 +161,7 @@ class transpositionTableClass {
             distribution = {0, 0, 0, ttBuckets * 4};
             std::fill(TT.begin(), TT.end(), ttBucket{});
         }
- 
+
         int16_t localToMateScore(searchNodeStruct* nodePtr, int16_t eval) {
 
             int16_t isPositiveMate = eval > mateScores::mateThreshold;
@@ -179,7 +179,7 @@ class transpositionTableClass {
             return eval + (isPositiveMate * int16_t(nodePtr->ply)) - (isNegativeMate * int16_t(nodePtr->ply));
         }
 
-        std::string pvLine(boardClass& board, int8_t depth, bool isFirstMove = true){   
+        std::string pvLine(boardClass& board, int8_t depth, bool isFirstMove = true){
 
             uint16_t ttMove = probeTTMove(board);
 
@@ -189,30 +189,30 @@ class transpositionTableClass {
                 board.unMakeMove(unMakeInfo, ttMove);
                 return (isFirstMove ? "" : " ") + board.moveToCoordinates(ttMove) + restOfLine;
             }
-            
+
             return "";
         }
 
         uint16_t probeTTMove(boardClass& board){
-            
+
             //find out what bucket it is located in
             uint64_t requestedHash = board.positionHash;
             uint64_t currentBucketIndex = (uint64_t(uint32_t(requestedHash >> 32ULL)) * ttBuckets) >> 32;
             TTentryStruct* entry = &TT[currentBucketIndex].entry[0];
-            
+
             //loop over all the entries to find a matching hash
             uint16_t returnMove = 0;
             for (uint8_t i = 0; i < 4; i++) {
 
                 uint16_t isHashMatch = requestedHash == entry[i].hash;
-                returnMove |= isHashMatch * entry[i].move;    
+                returnMove |= isHashMatch * entry[i].move;
             }
-            
-            return returnMove;            
+
+            return returnMove;
         }
 
     private:
-                
+
         int64_t ttEntryScore(TTentryStruct entry){
             using namespace packedBits;
             /* The transposition table is ordered in buckets of four entries. In order to determine which one to keep a score is made classifying how usefull
@@ -227,17 +227,17 @@ class transpositionTableClass {
             ALL nodes are an exception to this rule. An all node store a maximum score where the true score can be lower. As a result of this lower evals are prefered
             because they allow for more pruning.
             */
-           
+
             uint32_t age = (currentGeneration - entry.generation) & eightBits;
-           
+
             uint64_t unUsedGenerations = std::max<uint64_t>(1, age);
             uint64_t type              = uint64_t(entry.meta >> 14) & twoBits;
             uint64_t depth             = uint64_t(entry.meta & fourteenBits) + depth::ply * (type == nodeType::PV);
             int64_t eval               = (type == nodeType::ALL) ? -entry.eval : entry.eval;
-           
+
             return -int64_t(unUsedGenerations << 32) + int64_t(depth << 18 ) + int64_t(type << 16 ) + eval;
         }
-        
+
         TTentryStruct assembleNewEntry(searchEnvStruct& env, searchNodeStruct* nodePtr) {
             TTentryStruct assembledEntry;
 
@@ -252,7 +252,7 @@ class transpositionTableClass {
         }
 
         void replaceEntry(TTentryStruct& currentEntry, TTentryStruct& newEntry) {
-            
+
             uint64_t oldType = currentEntry.meta >> 14;
             uint64_t newType = newEntry.meta >> 14;
 
@@ -261,10 +261,10 @@ class transpositionTableClass {
             distribution[newType]++;
 
             currentEntry = newEntry;
-        }    
+        }
 
 };
-    
+
 
 
 
@@ -283,7 +283,7 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
 
 
     uint8_t startCastlingFlags = castlingFlags;
-    
+
     //unpack the move
     int64_t startingIndex = move & sixBits;
     int64_t targetIndex = (move >> 6) & sixBits;
@@ -322,7 +322,7 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
     fiftyMoveClockPly = ((isCaptureMove | pawnMove) != 0) ? 0 : fiftyMoveClockPly + 1;
     moveClockPly += 1;
     enpassantFiles = 0;
-    
+
     //clear the startingSquare
     bitboard[startPieceType] ^= startingBitBoard;
     pieceAt[startingIndex] = emptySquare;
@@ -364,13 +364,13 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
     //white enpassant to the right
     if ( ((startingIndex + 9) == targetIndex) && (startPieceType == whitePawn) && (targetPieceType == emptySquare)) [[unlikely]] {
         enpassantCapture<true, true, false>(startingIndex);
-    } 
+    }
 
     //double pawn push
     if ( ((startingIndex + 16) == targetIndex) && (startPieceType == whitePawn)) [[unlikely]] {
         enpassantFiles = (startingBitBoard >> 8);
     }
-    
+
     //black enpassant to the left
     if ( ((startingIndex - 9) == targetIndex) && (startPieceType == blackPawn) && (targetPieceType == 12)) [[unlikely]] {
         enpassantCapture<false, false, false>(startingIndex);
@@ -386,7 +386,7 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
         enpassantFiles = startingBitBoard >> 48;
     }
 
-    
+
     //white castling
     if ((startPieceType == whiteKing) && (startingIndex - 2) == targetIndex) [[unlikely]] { castledRook<true, false, false>();} //white castling queen side
     else
@@ -394,10 +394,10 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
 
     //black castling
     if ((startPieceType == blackKing) && (startingIndex - 2) == targetIndex) [[unlikely]] {castledRook<false, false, false>();} //black castling queen side
-    else 
+    else
     if ((startPieceType == blackKing) && (startingIndex + 2) == targetIndex) [[unlikely]] {castledRook<false, true, false>();}
-    
-    
+
+
     castlingFlags &= ~((whiteKingCastle | whiteQueenCastle) * uint32_t(startPieceType == whiteKing));
     castlingFlags &= ~((blackKingCastle | blackQueenCastle) * uint32_t(startPieceType == blackKing));
 
@@ -434,6 +434,3 @@ inline uint64_t boardClass::makeMove(const uint16_t& move, searchEnvStruct* envP
 }
 
 #endif
-
-
-

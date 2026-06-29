@@ -1,14 +1,14 @@
 /* Copyright (C) 2026 The Project_Nebulora Developers
 
-This program is free software: you can redistribute it and/or modify it under the terms of the 
-GNU General Public License as published by the Free Software Foundation, either version 3 
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3
 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. 
+You should have received a copy of the GNU General Public License along with this program.
 If not, see https://www.gnu.org/licenses/.
 */
 
@@ -44,11 +44,11 @@ void initialize(){
     for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
       zobristHashes[squareIndex * 13 + constants::emptySquare] = 0;
     }
-    
-    
+
+
     zobristHashes[hash::enPassantFileHash + 8] = 0; //the 8th file does not exist and correspond to no possible enpassant capture
-    
-    
+
+
     for (uint8_t castlingRights = 0; castlingRights < 16; castlingRights++) {
       if (std::popcount(castlingRights) == 1) {
         continue;
@@ -96,7 +96,7 @@ int main(){
             uint8_t maxDepth = std::stoi(nextToken); //doesn't handle exceptions properly
 
             uint64_t leafNodes = moveGenerator.perftRoot(board, maxDepth);
-            continue;        
+            continue;
         }
 
         //gather all relevant termination criteria and start the search.
@@ -105,7 +105,7 @@ int main(){
         do {
 
             /* does not yet support go mate, certainmoves*/
-            
+
             if (nextToken == "nodes")     { ss >> searchContext.maxNodes; } else
             if (nextToken == "binc")      { ss >> searchContext.bInc;     } else
             if (nextToken == "movestogo") { ss >> searchContext.movesToGo;} else
@@ -130,35 +130,35 @@ int main(){
                                                         "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
                                                         "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
                                                         "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"};
-            
+
             if ((ss >> nextToken) && (nextToken == "perft")) {
 
                 std::array<int, 6> depths = {7, 6, 8, 6, 5, 6};
                 std::array<uint64_t, 6> expectedOutcome = {3'195'901'860, 8'031'647'685, 3'009'794'393, 706'045'033, 89'941'194, 6'923'051'137};
                 std::array<uint64_t, 6> speed;
                 std::array<bool, 6> passed;
-    
+
                 for (int iTest = 0; iTest < 6; iTest++) {
-        
+
                     board.setupFEN(testPositions[iTest]);
 
                     auto startTime = std::chrono::high_resolution_clock::now();
                     uint64_t leafNodes = moveGenerator.perftRoot(board, depths[iTest]);
                     auto endTime = std::chrono::high_resolution_clock::now();
                     uint64_t runTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
-        
+
                     passed[iTest] = (leafNodes == expectedOutcome[iTest]);
                     speed[iTest] = leafNodes / runTime;
                 }
-    
+
                 for (int iTest = 0; iTest < 6; iTest++) {
-                    std::cout << "nodes per second: " << speed[iTest] << (passed[iTest] ? " passed" : " failed") << '\n';   
+                    std::cout << "nodes per second: " << speed[iTest] << (passed[iTest] ? " passed" : " failed") << '\n';
                 }
 
                 continue;
             }
 
-            
+
             std::chrono::time_point startTime = std::chrono::high_resolution_clock::now();
             uint64_t totalNodes = 0;
 
@@ -174,7 +174,7 @@ int main(){
                 searchContext.maxDepth = 12; //search limit
                 search.rootSearch(searchContext);
                 totalNodes += searchContext.maxNodes;
-                
+
                 uint16_t rawMove = search.searchStack[0].bestMove;
                 uint64_t unMakeInfo = board.makeMove<false, false>(rawMove);
                 }
@@ -234,7 +234,7 @@ int main(){
 
         if (nextToken == "setoption") { //could use some denesting.
             ss >> nextToken;
-        
+
             if (nextToken == "name") {
                 ss >> nextToken;
 
@@ -264,7 +264,7 @@ int main(){
             } else {
                 std::cout << "static_eval: " << evaluation.static_evaluation<true>(board) << '\n';
             }
-        } else 
+        } else
 
         if (nextToken == "d") {
             board.visualizeBoard();

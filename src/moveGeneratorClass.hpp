@@ -271,16 +271,16 @@ class moveGeneratorClass {
             uint64_t checkMask = checkingPieces;
 
             /* add D12 pieces
-            _pext_u64 is used for fast lookups for all squares seen by that piece. Thay are loaded in during startup. The idea is that
+            pext_u64 is used for fast lookups for all squares seen by that piece. Thay are loaded in during startup. The idea is that
             attack bitboard contains all squares that might influence mobitlity. Next I check how many of those are non empty. Next I use
             pext for extracting that combination of blocking pieces for an index into the lookuptable.
             source: https://www.codeproject.com/Articles/5313417/Worlds-Fastest-Bitboard-Chess-Movegenerator */
-            checkingPieces = seenByD12[friendlyKingIndex][_pext_u64(board.occupied[combined], attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
+            checkingPieces = seenByD12[friendlyKingIndex][pext_u64(board.occupied[combined], attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
             checksN       += std::popcount(checkingPieces);
             checkMask     |= addToMask(friendlyKingIndex, checkingPieces);
 
             //add Hv pieces
-            checkingPieces = seenByHV[friendlyKingIndex][_pext_u64(board.occupied[combined], attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
+            checkingPieces = seenByHV[friendlyKingIndex][pext_u64(board.occupied[combined], attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
             checksN       += std::popcount(checkingPieces);
             checkMask     |= addToMask(friendlyKingIndex, checkingPieces);
 
@@ -331,10 +331,10 @@ class moveGeneratorClass {
 
             //calculate the pinMaskHV
             //determine all pieces that might be pinned
-            uint64_t potentialPins = seenByHV[friendlyKingIndex][_pext_u64(allOccupiedSquares, attackHV[friendlyKingIndex])];
+            uint64_t potentialPins = seenByHV[friendlyKingIndex][pext_u64(allOccupiedSquares, attackHV[friendlyKingIndex])];
 
             //remove potentially pinned pieces and check if a pinning pieces hides behind it.
-            potentialPins = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~potentialPins), attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
+            potentialPins = seenByHV[friendlyKingIndex][pext_u64((allOccupiedSquares & ~potentialPins), attackHV[friendlyKingIndex])] & (opponentRookBitboard | opponentQueenBitboard);
 
             return addToMask(friendlyKingIndex, potentialPins);
         }
@@ -354,10 +354,10 @@ class moveGeneratorClass {
 
             //calculate the pinMaskHV
             //determine all pieces that might be pinned
-            uint64_t potentialPins = seenByD12[friendlyKingIndex][_pext_u64(allOccupiedSquares, attackD12[friendlyKingIndex])];
+            uint64_t potentialPins = seenByD12[friendlyKingIndex][pext_u64(allOccupiedSquares, attackD12[friendlyKingIndex])];
 
             //remove potentially pinned pieces and check if a pinning pieces hides behind it.
-            potentialPins = seenByD12[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~potentialPins), attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
+            potentialPins = seenByD12[friendlyKingIndex][pext_u64((allOccupiedSquares & ~potentialPins), attackD12[friendlyKingIndex])] & (opponentBishopBitboard | opponentQueenBitboard);
 
             return addToMask(friendlyKingIndex, potentialPins);
         }
@@ -447,7 +447,7 @@ class moveGeneratorClass {
                     //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
                     //However because both are removed from this rank I need to check for this pin explicitly
                     uint64_t movedAndCapturedPawn = bitShift<whiteToMove ? -8 : 8>(enpassantMove) | bitShift<whiteToMove ? -7 : 9>(enpassantMove);
-                    uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
+                    uint64_t targetsHV = seenByHV[friendlyKingIndex][pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
                     bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
                     validTargetSquares |= enpassantMove * legalEnpassantMove;
                 }
@@ -478,7 +478,7 @@ class moveGeneratorClass {
                     //check if the enpassant is pinned. This pawn may not be part of the pinmaskHV because the captured pawn is also in between.
                     //However because both are removed from this rank I need to check for this pin explicitly
                     uint64_t movedAndCapturedPawn = whiteToMove ? (bitShift<-8>(enpassantMove) | bitShift<-9>(enpassantMove)) : (bitShift<8>(enpassantMove) | bitShift<7>(enpassantMove));
-                    uint64_t targetsHV = seenByHV[friendlyKingIndex][_pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
+                    uint64_t targetsHV = seenByHV[friendlyKingIndex][pext_u64((allOccupiedSquares & ~movedAndCapturedPawn) | enpassantMove, attackHV[friendlyKingIndex])];
                     bool legalEnpassantMove = (targetsHV & opponentHVPieces) == 0;
                     validTargetSquares |= enpassantMove * legalEnpassantMove;
                 }
@@ -533,7 +533,7 @@ class moveGeneratorClass {
                 toMove ^= 1ULL << startingIndex;
 
                 //calculate all the valid targetsquares
-                uint64_t seenByDiagonal = seenByD12[startingIndex][_pext_u64(allOccupiedSquares, attackD12[startingIndex])];
+                uint64_t seenByDiagonal = seenByD12[startingIndex][pext_u64(allOccupiedSquares, attackD12[startingIndex])];
                 uint64_t validTargetSquares =  seenByDiagonal & checkMask;
                 if constexpr (isPinned) { validTargetSquares &= pinMaskD12;}
 
@@ -563,7 +563,7 @@ class moveGeneratorClass {
                 toMove ^= 1ULL << startingIndex;
 
                 //calculate all the valid targetsquares
-                uint64_t targetsHV = seenByHV[startingIndex][_pext_u64(allOccupiedSquares, attackHV[startingIndex])];
+                uint64_t targetsHV = seenByHV[startingIndex][pext_u64(allOccupiedSquares, attackHV[startingIndex])];
                 uint64_t validTargetSquares =  targetsHV & checkMask;
                 if constexpr (isPinned) {validTargetSquares &= pinMaskHV;}
 
@@ -753,7 +753,7 @@ class moveGeneratorClass {
                     toAdd ^= 1ULL << squareIndex;
 
                     //calculate all the squares it can see
-                    seenByOpponent |= seenByHV[squareIndex][_pext_u64(board.occupied[combined] & ~friendlyKingBitBoard, attackHV[squareIndex])];
+                    seenByOpponent |= seenByHV[squareIndex][pext_u64(board.occupied[combined] & ~friendlyKingBitBoard, attackHV[squareIndex])];
                 }
             }
 
@@ -766,7 +766,7 @@ class moveGeneratorClass {
                     toAdd ^= 1ULL << squareIndex;
 
                     //calculate all the squares it can see
-                    seenByOpponent |= seenByD12[squareIndex][_pext_u64(board.occupied[combined] & ~friendlyKingBitBoard, attackD12[squareIndex])];
+                    seenByOpponent |= seenByD12[squareIndex][pext_u64(board.occupied[combined] & ~friendlyKingBitBoard, attackD12[squareIndex])];
                 }
             }
 

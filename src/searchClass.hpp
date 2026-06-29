@@ -280,8 +280,8 @@ class searchClass {
 
             uint64_t timeOnTheClock = ctx.board.whiteToMove ? ctx.wtime : ctx.btime;
             uint64_t inc = ctx.board.whiteToMove ? ctx.wInc : ctx.bInc;
-            uint64_t movesToGo = std::max(ctx.movesToGo, 1ULL);
-            uint64_t maxTime = std::min(ctx.movetime, std::max(100ULL, timeOnTheClock / movesToGo + inc / 2) - 100ULL);
+            uint64_t movesToGo = std::max(ctx.movesToGo, uint64_t(1));
+            uint64_t maxTime = std::min(ctx.movetime, std::max(uint64_t(100), timeOnTheClock / movesToGo + inc / 2) - uint64_t(100));
 
             return maxTime;
         }
