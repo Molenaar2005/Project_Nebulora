@@ -30,7 +30,6 @@ class evaluationClass {
         int16_t static_evaluation(boardClass& board){
 
             uint64_t phase = 0;
-
             { //calculate the current phase
                 for (uint64_t pieceType = 0; pieceType < 6; pieceType++) { //loop over all six piecetypes
 
@@ -42,14 +41,11 @@ class evaluationClass {
             }
 
 
+            //evaluate piece square tables
             constexpr bool white = true;
             constexpr bool black = false;
-            uint64_t packedScoreWhite = 0;
-            uint64_t packedScoreBlack = 0;
-
-            pieceSquareTables<white>(packedScoreWhite, board);
-            pieceSquareTables<black>(packedScoreBlack, board);
-
+            uint64_t packedScoreWhite = pieceSquareTables<white>(board);
+            uint64_t packedScoreBlack = pieceSquareTables<black>(board);
 
 
             //tempo bonus
@@ -90,15 +86,19 @@ class evaluationClass {
     private:
 
         template<bool whiteSide>
-        void pieceSquareTables(uint64_t& packedScore, boardClass& board) {
+        uint64_t pieceSquareTables(boardClass& board) {
+            uint64_t packedScore = 0;
 
             //evaluate all the pieces and the square they occupy
             for (uint64_t pieceType = 0; pieceType < 6; pieceType++) {
 
+                //calculate the ptr to section of weights corresponding to this piece.
+                //this saves redundant work and improves data dependencies.
+                const uint64_t* pieceWeightPtr = &packedEvalWeights[64 * pieceType + 6];
+
+                //pieces to evaluate
                 constexpr uint64_t blackBias = 6 * !whiteSide;
                 uint64_t pieces = board.bitboard[pieceType + blackBias];
-
-                const uint64_t* pieceWeightPtr = &packedEvalWeights[64 * pieceType + 6];
 
                 while (pieces != 0) {
                     uint64_t squareIndex = std::countr_zero(pieces);
@@ -111,6 +111,8 @@ class evaluationClass {
                     packedScore += pieceWeightPtr[squareIndex];
                 }
             }
+
+            return packedScore;
         }
 
         constexpr uint64_t calculateMaxPhase() {
